@@ -1,0 +1,14 @@
+{
+  "name": "enhanced-mcp-wrapper",
+  "version": "1.0.0",
+  "description": "Enhanced MCP wrapper for Gendl with configurable server settings and Docker integration",
+  "main": "enhanced-mcp-wrapper.js",
+  "scripts": {
+    "start": "node enhanced-mcp-wrapper.js"
+  },
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "commander": "^11.0.0"
+  }
+}
