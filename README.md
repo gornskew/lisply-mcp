@@ -1,7 +1,7 @@
 # Model Context Protocol (MCP) Wrapper for Lisply Backends
 
-This is an MCP wrapper script for connecting Claude Desktop and
-similar "agentic AI clients" to certain "Lisply" services. It
+This is an MCP wrapper script meant for connecting Claude Desktop and
+similar "agentic AI clients" to Lisp-speaking backend services. It
 provides a powerful interface between Claude and any
 [compliant](BACKEND-REQS.md) Lisp-speaking backend service
 e.g. [Gendl](https://gitlab.common-lisp.net/gendl/gendl), enabling
