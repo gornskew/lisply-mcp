@@ -130,7 +130,7 @@ const EVAL_TIMEOUT = parseInt(options.evalTimeout || process.env.EVAL_TIMEOUT ||
 
 // Set up endpoint paths
 const EVAL_ENDPOINT = options.evalEndpoint || process.env.EVAL_ENDPOINT || '/lisply/lisp-eval';
-const PING_ENDPOINT = options.pingEndpoint || process.env.PING_ENDPOINT || '/lisply/ping-gendl';
+const PING_ENDPOINT = options.pingEndpoint || process.env.PING_ENDPOINT || '/lisply/ping-lisp';
 
 // Set up logging to file for debugging
 const LOG_FILE = options.logFile || process.env.LISPLY_LOG_FILE || process.env.LISPY_LOG_FILE || process.env.GENDL_LOG_FILE || '/tmp/mcp-wrapper.log';

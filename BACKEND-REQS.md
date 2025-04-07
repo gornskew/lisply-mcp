@@ -176,7 +176,7 @@ Backends may provide additional tools beyond the core requirements, which should
 
 To test a backend for compliance, implement the following checks:
 
-1. Ping test: `GET /lisply/ping-gendl`
+1. Ping test: `GET /lisply/ping-lisp`
 2. Tool list retrieval: `GET /lisply/tools/list`
 3. Basic Lisp evaluation: 
    ```
