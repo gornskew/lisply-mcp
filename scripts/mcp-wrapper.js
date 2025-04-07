@@ -63,7 +63,7 @@ program
     .option('--start-https', 'Start HTTPS service in backend container (default: false)')
     .option('--start-swank', 'Start SWANK service in backend container (default: true)')
     .option('--start-telnet', 'Start TELNET service in backend container (default: false)')
-    .option('--use-stdio', 'Use standard I/O for Lisp communication with local container (default: disabled). Note this mode results in mixed standard output with return values in lisp_eval.')
+    .option('--no-use-stdio', 'Disable stdio capability for local containers. When disabled, HTTP mode will always be used even when stdio mode is requested.')
     .option('--repl-prompt <pattern>', 'REPL prompt pattern to detect Lisp evaluation completion (default: ?)')
     .option('--eval-timeout <ms>', 'Timeout for Lisp evaluation in milliseconds (default: 30000)')
     .option('--eval-endpoint <path>', 'HTTP endpoint for Lisp evaluation (default: /mcp/lisp-eval)')
@@ -109,8 +109,8 @@ const START_SWANK = options.startSwank !== false && (process.env.START_SWANK !==
 const START_TELNET = options.startTelnet || process.env.START_TELNET === 'true' || false;
 
 // Lisp REPL communication configuration
-// Default to stdio for local containers unless explicitly disabled
-const USE_STDIO = options.useStdio === true || process.env.USE_STDIO === 'true';
+// Enable stdio capability by default (but http is still the default communication mode)
+const USE_STDIO = options.useStdio !== false && process.env.USE_STDIO !== 'false';
 
 // Default REPL prompts by implementation
 const DEFAULT_PROMPTS = {
@@ -129,8 +129,8 @@ const REPL_PROMPT = options.replPrompt || process.env.REPL_PROMPT || DEFAULT_PRO
 const EVAL_TIMEOUT = parseInt(options.evalTimeout || process.env.EVAL_TIMEOUT || '30000', 10);
 
 // Set up endpoint paths
-const EVAL_ENDPOINT = options.evalEndpoint || process.env.EVAL_ENDPOINT || '/mcp/lisp-eval';
-const PING_ENDPOINT = options.pingEndpoint || process.env.PING_ENDPOINT || '/mcp/ping-gendl';
+const EVAL_ENDPOINT = options.evalEndpoint || process.env.EVAL_ENDPOINT || '/lisply/lisp-eval';
+const PING_ENDPOINT = options.pingEndpoint || process.env.PING_ENDPOINT || '/lisply/ping-gendl';
 
 // Set up logging to file for debugging
 const LOG_FILE = options.logFile || process.env.LISPLY_LOG_FILE || process.env.LISPY_LOG_FILE || process.env.GENDL_LOG_FILE || '/tmp/mcp-wrapper.log';
@@ -208,7 +208,7 @@ const ENV_MOUNTS = process.env.LISPLY_MOUNTS ? process.env.LISPLY_MOUNTS.split('
 const ALL_MOUNTS = [...MOUNTS, ...ENV_MOUNTS];
 
 // Base path for MCP endpoints
-const MCP_BASE_PATH = process.env.MCP_BASE_PATH || process.env.GENDL_BASE_PATH || '/mcp';
+const MCP_BASE_PATH = process.env.MCP_BASE_PATH || process.env.GENDL_BASE_PATH || '/lisply';
 
 
 
@@ -219,7 +219,7 @@ if (!SUPPORTED_IMPLS.includes(LISP_IMPL)) {
 
 logger.info(`Starting MCP wrapper with backend host: ${BACKEND_HOST}, SWANK port: ${SWANK_HOST_PORT}, HTTP port: ${HTTP_HOST_PORT}`);
 logger.info(`Auto-start is ${AUTO_START ? 'enabled' : 'disabled'}, Docker image: ${DOCKER_IMAGE}`);
-logger.info(`Lisp REPL communication mode: ${USE_STDIO ? 'stdio' : 'HTTP'}, Prompt: '${REPL_PROMPT}', Timeout: ${EVAL_TIMEOUT}ms`);
+logger.info(`Stdio capability for local containers: ${USE_STDIO ? 'enabled' : 'disabled'} (default: enabled), HTTP is default mode, Prompt: '${REPL_PROMPT}', Timeout: ${EVAL_TIMEOUT}ms`);
 logger.info(`Endpoints - Eval: ${EVAL_ENDPOINT}, Ping: ${PING_ENDPOINT}`);
 if (ALL_MOUNTS.length > 0) {
   logger.info(`Configured mounts: ${ALL_MOUNTS.join(', ')}`);

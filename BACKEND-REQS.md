@@ -12,13 +12,13 @@ document.
 
 A Lisply backend must provide an HTTP server that exposes the following endpoints:
 
-- `/mcp/ping-lisp`: Simple ping endpoint for availability checks
-- `/mcp/lisp-eval`: Endpoint for evaluating Lisp expressions
-- `/mcp/tools/list`: Endpoint that returns a list of available tools
+- `/lisply/ping-lisp`: Simple ping endpoint for availability checks
+- `/lisply/lisp-eval`: Endpoint for evaluating Lisp expressions
+- `/lisply/tools/list`: Endpoint that returns a list of available tools
 
 ### 2. Lisp Evaluation Protocol
 
-The backend must support Lisp code evaluation through the `/mcp/lisp-eval` endpoint with the following characteristics:
+The backend must support Lisp code evaluation through the `/lisply/lisp-eval` endpoint with the following characteristics:
 
 - **Request Format**: HTTP POST accepting JSON payload with:
   ```json
@@ -47,7 +47,7 @@ The backend must support Lisp code evaluation through the `/mcp/lisp-eval` endpo
 
 ### 3. Tool Definitions
 
-The backend must expose a list of its capabilities through the `/mcp/tools/list` endpoint, which returns a JSON object with the structure:
+The backend must expose a list of its capabilities through the `/lisply/tools/list` endpoint, which returns a JSON object with the structure:
 
 ```json
 {
@@ -176,16 +176,16 @@ Backends may provide additional tools beyond the core requirements, which should
 
 To test a backend for compliance, implement the following checks:
 
-1. Ping test: `GET /mcp/ping-gendl`
-2. Tool list retrieval: `GET /mcp/tools/list`
+1. Ping test: `GET /lisply/ping-gendl`
+2. Tool list retrieval: `GET /lisply/tools/list`
 3. Basic Lisp evaluation: 
    ```
-   POST /mcp/lisp-eval
+   POST /lisply/lisp-eval
    {"code": "(+ 1 2 3)"}
    ```
 4. Package specification:
    ```
-   POST /mcp/lisp-eval
+   POST /lisply/lisp-eval
    {"code": "(package-name *package*)", "package": "gdl-user"}
    ```
 
