@@ -133,8 +133,10 @@ program
     .option('--no-use-stdio', 'Disable stdio capability for local containers. When disabled, HTTP mode will always be used even when stdio mode is requested.')
     .option('--repl-prompt <pattern>', 'REPL prompt pattern to detect Lisp evaluation completion (default: ?)')
     .option('--eval-timeout <ms>', 'Timeout for Lisp evaluation in milliseconds (default: 30000)')
-    .option('--eval-endpoint <path>', 'HTTP endpoint for Lisp evaluation (default: /mcp/lisp-eval)')
-    .option('--ping-endpoint <path>', 'HTTP endpoint for ping (default: /mcp/ping-lisp)')
+    .option('--endpoint-prefix <prefix>', 'Prefix for all endpoints (default: lisply)')
+    .option('--lisp-eval-endpoint <n>', 'Endpoint name for Lisp evaluation (default: lisp-eval)')
+    .option('--http-request-endpoint <n>', 'Endpoint name for HTTP requests (default: http-request)')
+    .option('--ping-endpoint <n>', 'Endpoint name for ping (default: ping-lisp)')
     .parse(process.argv);
 
 const options = program.opts();
@@ -232,9 +234,17 @@ const DEBUGGER_PROMPTS = {
 const REPL_PROMPT = options.replPrompt || process.env.REPL_PROMPT || DEFAULT_PROMPTS[LISP_IMPL] || '?';
 const EVAL_TIMEOUT = parseInt(options.evalTimeout || process.env.EVAL_TIMEOUT || '30000', 10);
 
-// Set up endpoint paths
-const EVAL_ENDPOINT = options.evalEndpoint || getEnvVar('EVAL_ENDPOINT', '/lisply/lisp-eval');
-const PING_ENDPOINT = options.pingEndpoint || getEnvVar('PING_ENDPOINT', '/lisply/ping-lisp');
+// Set up endpoint paths with configurable prefix and names
+const ENDPOINT_PREFIX = options.endpointPrefix || getEnvVar('ENDPOINT_PREFIX', 'lisply');
+const LISP_EVAL_ENDPOINT_NAME = options.lispEvalEndpoint || getEnvVar('LISP_EVAL_ENDPOINT', 'lisp-eval');
+const HTTP_REQUEST_ENDPOINT_NAME = options.httpRequestEndpoint || getEnvVar('HTTP_REQUEST_ENDPOINT', 'http-request');
+const PING_ENDPOINT_NAME = options.pingEndpoint || getEnvVar('PING_ENDPOINT', 'ping-lisp');
+
+// Construct full endpoint paths with prefix
+const BASE_PATH = `/${ENDPOINT_PREFIX}`;
+const EVAL_ENDPOINT = `${BASE_PATH}/${LISP_EVAL_ENDPOINT_NAME}`;
+const HTTP_REQUEST_ENDPOINT = `${BASE_PATH}/${HTTP_REQUEST_ENDPOINT_NAME}`;
+const PING_ENDPOINT = `${BASE_PATH}/${PING_ENDPOINT_NAME}`;
 
 // Set up logging to file for debugging
 const LOG_FILE = options.logFile || getEnvVar('LOG_FILE', '/tmp/lisply-mcp-wrapper.log');
@@ -473,8 +483,8 @@ function getEnvMounts() {
 const ENV_MOUNTS = getEnvMounts();
 const ALL_MOUNTS = [...MOUNTS, ...ENV_MOUNTS];
 
-// Base path for MCP endpoints
-const LISPLY_BASE_PATH = getEnvVar('LISPLY_BASE_PATH', '/lisply'));
+// This has been replaced by the BASE_PATH variable
+// const LISPLY_BASE_PATH = getEnvVar('LISPLY_BASE_PATH', '/lisply');
 
 
 
@@ -486,7 +496,7 @@ if (!SUPPORTED_IMPLS.includes(LISP_IMPL)) {
 logger.info(`Starting MCP wrapper with backend host: ${BACKEND_HOST}, SWANK port: ${SWANK_HOST_PORT}, HTTP port: ${HTTP_HOST_PORT}`);
 logger.info(`Auto-start is ${AUTO_START ? 'enabled' : 'disabled'}, Docker image: ${DOCKER_IMAGE}`);
 logger.info(`Stdio capability for local containers: ${USE_STDIO ? 'enabled' : 'disabled'} (default: enabled), HTTP is default mode, Prompt: '${REPL_PROMPT}', Timeout: ${EVAL_TIMEOUT}ms`);
-logger.info(`Endpoints - Eval: ${EVAL_ENDPOINT}, Ping: ${PING_ENDPOINT}`);
+logger.info(`Endpoint prefix: ${ENDPOINT_PREFIX}, Endpoints - Eval: ${EVAL_ENDPOINT}, HTTP: ${HTTP_REQUEST_ENDPOINT}, Ping: ${PING_ENDPOINT}`);
 if (ALL_MOUNTS.length > 0) {
   logger.info(`Configured mounts: ${ALL_MOUNTS.join(', ')}`);
 }
@@ -1197,7 +1207,7 @@ function handleToolsList(request) {
   const options = {
     hostname: BACKEND_HOST,
     port: HTTP_HOST_PORT,
-    path: `${MCP_BASE_PATH}/tools/list`,
+    path: `${BASE_PATH}/tools/list`,
     method: 'GET'
   };
   
