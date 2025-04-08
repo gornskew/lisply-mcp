@@ -97,11 +97,11 @@ function safeExec(cmd, logError = true) {
   } catch (error) {
     if (logError) {
       // Log at debug level to avoid cluttering logs with expected errors
-      console.debug(`Error executing command: ${cmd}. Error: ${error.message}`);
+      process.stderr.write(`[DEBUG] Error executing command: ${cmd}. Error: ${error.message}\n`);
       
       // Add more details at trace level if available
       if (error.stderr) {
-        console.debug(`Command stderr: ${error.stderr}`);
+        process.stderr.write(`[DEBUG] Command stderr: ${error.stderr}\n`);
       }
     }
     return null;
@@ -118,9 +118,11 @@ function getGitBranch(options) {
   const DEFAULT_BRANCH = 'master';
   
   // Try git command first (most reliable)
-  const branch = safeExec('git rev-parse --abbrev-ref HEAD');
+  // Run the git command from the project root
+  const projectRoot = path.join(__dirname, '..', '..');
+  const branch = safeExec(`cd "${projectRoot}" && git rev-parse --abbrev-ref HEAD`);
   if (branch && branch !== 'HEAD') {
-    console.info(`Git branch detected via command: ${branch}`);
+    process.stderr.write(`[INFO] Git branch detected via command: ${branch}\n`);
     return branch;
   }
   
@@ -129,15 +131,15 @@ function getGitBranch(options) {
     const gitHeadContent = fs.readFileSync(path.join(__dirname, '..', '..', '.git', 'HEAD'), 'utf8').trim();
     if (gitHeadContent.startsWith('ref: refs/heads/')) {
       const branchName = gitHeadContent.substring('ref: refs/heads/'.length);
-      console.info(`Git branch detected via HEAD file: ${branchName}`);
+      process.stderr.write(`[INFO] Git branch detected via HEAD file: ${branchName}\n`);
       return branchName;
     }
   } catch (error) {
-    console.debug(`Could not read .git/HEAD file: ${error.message}`);
+    process.stderr.write(`[DEBUG] Could not read .git/HEAD file: ${error.message}\n`);
   }
   
   // Final fallback to default branch
-  console.warn('Could not determine git branch, using default branch');
+  process.stderr.write('[WARN] Could not determine git branch, using default branch\n');
   return DEFAULT_BRANCH;
 }
 
@@ -157,30 +159,31 @@ function getVersionInfo() {
   };
   
   // Check if we're in a git repo first
-  const isGitRepo = safeExec('git rev-parse --is-inside-work-tree') === 'true';
+  const projectRoot = path.join(__dirname, '..', '..');
+  const isGitRepo = safeExec(`cd "${projectRoot}" && git rev-parse --is-inside-work-tree`) === 'true';
   
   if (isGitRepo) {
     // Get branch name using our unified function
     info.branch = getGitBranch();
     
     // Get commit hash (short)
-    const commit = safeExec('git rev-parse --short HEAD');
+    const commit = safeExec(`cd "${projectRoot}" && git rev-parse --short HEAD`);
     if (commit) {
       info.commit = commit;
     }
     
     // Try to get the latest tag
-    const tag = safeExec('git describe --tags --abbrev=0 2>/dev/null');
+    const tag = safeExec(`cd "${projectRoot}" && git describe --tags --abbrev=0 2>/dev/null`);
     if (tag) {
       info.tag = tag;
     }
     
     // Check if working directory is dirty
-    const status = safeExec('git status --porcelain');
+    const status = safeExec(`cd "${projectRoot}" && git status --porcelain`);
     info.dirty = status && status.length > 0;
     
     // Get commit date
-    const date = safeExec('git log -1 --format=%cI');
+    const date = safeExec(`cd "${projectRoot}" && git log -1 --format=%cI`);
     if (date) {
       info.date = date;
     }
@@ -233,7 +236,7 @@ function checkPortConflicts(config) {
   
   // Log any conflicts but don't abort
   if (conflicts.length > 0) {
-    console.warn(`Detected port conflicts: ${conflicts.join(', ')}`);
+    process.stderr.write(`[WARN] Detected port conflicts: ${conflicts.join(', ')}\n`);
   }
   
   return conflicts.length === 0;

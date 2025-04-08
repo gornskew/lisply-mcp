@@ -209,6 +209,22 @@ function startMcpWrapper(config, logger, handlers) {
     try {
       const request = JSON.parse(line);
       
+      // Handle notifications (no response needed)
+      if (request.method && request.method.startsWith('notifications/')) {
+        switch (request.method) {
+          case 'notifications/initialized':
+            logger.info('Received initialization notification');
+            break;
+          case 'notifications/cancelled':
+            logger.info(`Received cancellation notification for request ${request.params?.requestId}: ${request.params?.reason}`);
+            break;
+          default:
+            logger.info(`Received notification: ${request.method}`);
+        }
+        return; // No response needed for notifications
+      }
+      
+      // Handle methods that require responses
       switch (request.method) {
         case 'initialize':
           handlers.handleInitialize(request, config, logger);
@@ -220,26 +236,24 @@ function startMcpWrapper(config, logger, handlers) {
           handlers.handleToolsList(request, config, logger);
           break;
         case 'resources/list':
-          handlers.sendStandardResponse(request, { resources: [] });
+          logger.info('Handling resources/list request');
+          handlers.sendStandardResponse(request.id, { resources: [] }, logger);
           break;
         case 'prompts/list':
-          handlers.sendStandardResponse(request, { prompts: [] });
-          break;
-        case 'notifications/initialized':
-          // Just acknowledge notification, no response needed
-          logger.info('Received initialization notification');
+          logger.info('Handling prompts/list request');
+          handlers.sendStandardResponse(request.id, { prompts: [] }, logger);
           break;
         default:
           // Send method not supported error for any other method
           logger.warn(`Unsupported method: ${request.method}`);
-          handlers.sendErrorResponse(request, -32601, `Method not supported: ${request.method}`);
+          handlers.sendErrorResponse(request.id, -32601, `Method not supported: ${request.method}`, logger);
       }
     } catch (error) {
       logger.error(`Error processing request: ${error.message}`);
       if (line && line.includes('"id"')) {
         try {
           const id = JSON.parse(line).id;
-          handlers.sendErrorResponse({ id }, -32603, `Internal error: ${error.message}`);
+          handlers.sendErrorResponse(id, -32603, `Internal error: ${error.message}`, logger);
         } catch (e) {
           logger.error(`Could not extract request ID: ${e.message}`);
         }
