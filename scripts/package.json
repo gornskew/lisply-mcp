@@ -1,13 +1,13 @@
 {
-  "name": "enhanced-mcp-wrapper",
+  "name": "lisply-mcp-wrapper",
   "version": "1.0.0",
-  "description": "Enhanced MCP wrapper for Gendl with configurable server settings and Docker integration",
-  "main": "enhanced-mcp-wrapper.js",
+  "description": "MCP wrapper for Lisply backends with configurable server settings and Docker integration",
+  "main": "mcp-wrapper.js",
   "scripts": {
-    "start": "node enhanced-mcp-wrapper.js"
+    "start": "node mcp-wrapper.js"
   },
-  "author": "",
-  "license": "MIT",
+  "author": "Genworks",
+  "license": "AGPL-3.0",
   "dependencies": {
     "commander": "^11.0.0"
   }

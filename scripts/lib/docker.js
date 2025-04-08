@@ -6,6 +6,7 @@
 
 const fs = require('fs');
 const { exec, execSync, spawn } = require('child_process');
+const { getGitBranch, getEnvVar, sanitizeDockerTag } = require('./config');
 
 /**
  * Check if Docker is available for container management
@@ -99,11 +100,11 @@ async function ensureDockerLogin(logger) {
  * @returns {string} - Fully qualified Docker image name
  */
 function constructDockerImageName(config, logger) {
-  const { options, sanitizeDockerTag, getGitBranch } = config;
+  const { options } = config;
   
   // Get branch name with fallbacks
   const branchName = options.imageBranch || 
-                    config.getEnvVar('IMAGE_BRANCH', getGitBranch(options));
+                    getEnvVar('IMAGE_BRANCH', getGitBranch(options));
   
   // Sanitize branch name for Docker tag
   const formattedBranch = sanitizeDockerTag(branchName);
@@ -113,7 +114,7 @@ function constructDockerImageName(config, logger) {
   
   // Get base name with fallbacks
   const baseName = options.imageBaseName || 
-                  config.getEnvVar('IMAGE_BASE', config.DEFAULT_IMAGE_BASE);
+                  getEnvVar('IMAGE_BASE', config.DEFAULT_IMAGE_BASE);
   
   // Log the components used to construct the image name
   logger.debug(`Constructing Docker image name from: Base=${baseName}, Branch=${branchName} (Formatted=${formattedBranch}), Impl=${impl}`);
@@ -146,7 +147,7 @@ function execPromise(command) {
  */
 async function pullLatestBackendImage(config, logger) {
   return new Promise(async (resolve) => {
-    let currentImage = config.options.dockerImage || config.getEnvVar('DOCKER_IMAGE', constructDockerImageName(config, logger));
+    let currentImage = config.options.dockerImage || getEnvVar('DOCKER_IMAGE', constructDockerImageName(config, logger));
     logger.info(`Attempting to pull latest backend image: ${currentImage}`);
     
     // Try pulling the image matching the current branch
@@ -168,8 +169,11 @@ async function pullLatestBackendImage(config, logger) {
         logger.warn(`Backend image ${currentImage} does not exist locally`);
         
         // If the current image is already the default, we've run out of options
-        const imageBaseName = config.options.imageBaseName || process.env.LISPLY_IMAGE_BASE || config.DEFAULT_IMAGE_BASE;
-        const defaultImage = `${imageBaseName}:${config.DEFAULT_BRANCH}-${config.DEFAULT_IMPL}`;
+        const DEFAULT_IMAGE_BASE = 'dcooper8/gendl'; // Define default here to avoid dependency
+        const DEFAULT_BRANCH = 'master';
+        const DEFAULT_IMPL = 'ccl';
+        const imageBaseName = config.options.imageBaseName || process.env.LISPLY_IMAGE_BASE || DEFAULT_IMAGE_BASE;
+        const defaultImage = `${imageBaseName}:${DEFAULT_BRANCH}-${DEFAULT_IMPL}`;
         if (currentImage === defaultImage) {
           logger.error(`No suitable backend image available`);
           resolve({ success: false });

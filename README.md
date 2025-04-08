@@ -1,6 +1,12 @@
 # Model Context Protocol (MCP) Wrapper for Lisply Backends
 
-This MCP wrapper script connects Claude Desktop to Lisp backends, enabling direct AI-assisted symbolic programming with systems like [Gendl](https://gitlab.common-lisp.net/gendl/gendl).
+This MCP wrapper script connects MCP-capable AI agents such as Claude
+Desktop to "Lisp-speaking" backends, enabling direct AI-assisted
+symbolic programming with "Lisply-compliant" systems such as
+[Gendl](https://gitlab.common-lisp.net/gendl/gendl), which speaks a
+Common Lisp superset, and [Skewed
+Emacs](https://github.com/gornskew/skewed-emacs), which speaks Emacs
+Lisp.
 
 ## Quick Start
 
@@ -11,10 +17,10 @@ cd scripts
 npm install
 chmod +x mcp-wrapper.js
 ```
+ 
+### 2. Add to AI Agent's Desktop Configuration (e.g. claude\_desktop\_config.json)
 
-### 2. Add to Claude Desktop Configuration
-
-Add this to your `claude_desktop_config.json`:
+Add this to your `claude_desktop_config.json` or similar:
 
 ```json
 {
@@ -44,9 +50,9 @@ With volume mounting (useful for project access):
 }
 ```
 
-### 3. Available Tools for Claude
+### 3. Available Tools for AI Agents
 
-The wrapper exposes these tools to Claude:
+The wrapper exposes these MCP tools:
 
 - `lisp_eval`: Evaluate Lisp code directly
 - `http_request`: Make HTTP requests to backend endpoints
@@ -54,12 +60,12 @@ The wrapper exposes these tools to Claude:
 
 ### 4. Example Lisp Evaluation
 
-Claude can now run Lisp code:
+The AI Agent can now run Lisp code (Common Lisp with Gendl extensions, in this example):
 
 ```lisp
 (in-package :gdl-user)
-(defparameter *box* (make-box :width 10 :height 5 :depth 3))
-(theo *box* width) ;; Returns 10
+(defparameter *box* (make-object 'box :width 10 :length 3 :height 5 ))
+(theo *box* volume) ;; Returns 150
 ```
 
 ## Table of Contents
@@ -80,20 +86,22 @@ Claude can now run Lisp code:
 
 ## Overview
 
-The Lisply MCP wrapper is implemented in Nodejs with a modular architecture, and provides a bridge
-between Claude AI and any [compliant Lisply backend
-system](BACKEND-REQS.md). This wrapper enables Claude to:
+The Lisply MCP wrapper is implemented in Nodejs with a modular
+architecture, and provides a bridge between an AI Agent and any
+[compliant Lisply backend system](BACKEND-REQS.md). This wrapper
+enables the AI Agent to:
 
-1. Evaluate Lisp code in the Lisply Environment (LE).
-2. Make HTTP requests to any endpoints implemented in the LE.
-3. Access introspection and documentation lookup facilities in the LE.
+1. Evaluate Lisp code in the Lisply Backend (LB).
+2. Make HTTP requests to any endpoints implemented in the LB.
+3. Access introspection and documentation lookup facilities in the LB.
 4. Create, manipulate, compile, load, and analyze files through Lisp evaluation.
 5. Interact with Lisp debuggers (for locally spawned containers).
 
 ## Architecture
 
 The MCP wrapper implements the Model Context Protocol (MCP) to connect
-Claude with Lisply backend capabilities. Here's how the components interact:
+Claude with Lisply backend capabilities. Here's how the components
+interact:
 
 
 ```mermaid
@@ -137,8 +145,8 @@ flowchart TB
 ```
 
 The wrapper script handles:
-1. Starting and managing a Lisply Docker container if needed
-2. Routing requests between Claude and the Lisply Backend
+1. Starting and managing a Lisply-compliant Docker container if needed
+2. Routing requests between the AI Agent (e.g. Claude Desktop) and the Lisply Backend
 3. Translating between the MCP protocol and the backend [Lisply
    API](BACKEND-REQS.md)
 4. Error handling and logging
@@ -239,9 +247,11 @@ Options:
 
 ### Environment Variables
 
-The script also supports configuration via environment variables. You can specify variables with the "LISPLY_" prefix or with no prefix:
+The script also supports configuration via environment variables. You
+can specify variables with the "LISPLY_" prefix or with no prefix:
 
-**Note:** It's important to distinguish between host ports (visible on the host system) and container ports (internal to the container):
+**Note:** It's important to distinguish between host ports (visible on
+the host system) and container ports (internal to the container):
 
 | Environment Variable | Description | Default |
 |----------------------|-------------|---------|
@@ -281,18 +291,19 @@ The MCP wrapper integrates closely with Docker to manage Lisply containers effic
 
 ### Docker Image Selection
 
-The wrapper automatically selects the appropriate Docker image based on the current branch in your lisply-mcp repository:
+The wrapper automatically selects the appropriate Docker image based
+on the current branch in your lisply-mcp repository:
 
-1. The Docker image follows the naming pattern: `dcooper8/gendl:${branch}-${impl}`
-   - `${branch}` is the current git branch name with any slashes (`/`) converted to double hyphens (`--`)
+1. The Docker image follows the naming pattern: `dcooper8/${IMAGE_BASE}:${IMAGE_BRANCH}-${LISP_IMPL}`
+   - `${branch}` defaults to the current git branch name with any slashes (`/`) converted to double hyphens (`--`)
      - For example, `release/1598` becomes `release--1598` in the image tag
      - `devo` branch will use the image tag `devo`
-   - `${impl}` is the Lisp implementation (ccl or sbcl)
+   - `${LISP_IMPL}` is the Lisp implementation (ccl or sbcl)
 
 2. The script will attempt to pull or use an image matching your current branch:
-   - First tries to pull the image matching your current branch from Docker Hub
-   - If pull fails, checks if the image exists locally
-   - If neither works, falls back to the `master` branch image
+   - First tries to pull the image matching your current branch from Docker Hub.
+   - If pull fails, checks if the image exists locally.
+   - If neither works, falls back to the `master` branch image.
 
 3. You can override the automatic selection with:
    - The `--docker-image` command-line argument
@@ -317,7 +328,9 @@ The wrapper will attempt to pull the latest version of the appropriate Docker im
 
 ### Existing Service Detection
 
-The wrapper will check if a Lisply service is already running on the specified host and ports before attempting to start a container:
+The wrapper will check if a Lisply service is already running on the
+specified host and ports and use it if it exists, before attempting to
+start a container:
 
 1. HTTP service (HTTP_HOST_PORT) is checked first as the primary service
 2. SWANK service (SWANK_HOST_PORT) is checked as a fallback
@@ -336,11 +349,14 @@ The wrapper will check if a Lisply service is already running on the specified h
 
 2. The wrapper will display warnings about which settings are being ignored
 
-This ensures the wrapper works properly with external Lisply services while giving clear feedback about ignored configuration options.
+The wrapper is intended to work with arbitrary local and external
+already-running Lisply-compliant services, in which case it doesn't
+spawn any container at all.
 
 ### Volume Mounting
 
-You can mount host directories into the Lisply container to share files between your host system and the container:
+You can mount host directories into the Lisply container to share
+files between your host system and the container:
 
 ```bash
 node mcp-wrapper.js --mount /home/user/projects:/projects
@@ -358,18 +374,20 @@ LISPLY_MOUNTS=/home/user/projects:/projects,/home/user/data:/data node mcp-wrapp
 
 ## Communication Modes
 
-The Lisply MCP wrapper supports two primary modes of communication with the Lisply backend: HTTP mode and stdio mode.
+The Lisply MCP wrapper supports two primary modes of communication
+with the Lisply backend: HTTP mode and stdio mode.
 
 ### HTTP Mode
 
-HTTP mode is the default communication method and works with both local and remote Lisply backends.
+HTTP mode is the default communication method and works with both
+local and remote Lisply backends.
 
 **Characteristics:**
 - Structured responses with separate result and stdout fields
 - Error handling that captures and returns errors as strings
 - Compatible with all Lisply backends, local or remote
 - Suitable for most use cases
-- Response format: `Result: <result>, Stdout: <output>`
+- Response format: `Result: <result>, Stdout: <output>, Error: <any error>`
 
 **Example response in HTTP mode:**
 ```
@@ -393,8 +411,9 @@ This is a message to standard output
 6
 ```
 
-**Debugger Support:**
-When an error occurs in stdio mode, the Lisp debugger can be activated, allowing Claude to interact with it. The wrapper detects debugger prompts and provides metadata about the debugger state to Claude.
+**Debugger Support:** When an error occurs in stdio mode, the Lisp
+debugger can be interacted with. The wrapper detects debugger prompts
+and provides metadata about the debugger state to the AI Agent.
 
 **Mode Selection:**
 - Default mode is HTTP
@@ -511,7 +530,8 @@ Here's a more advanced example of how to configure Claude Desktop to use this wr
 
 #### Lisp Evaluation Tool (`lisp_eval`)
 
-The `lisp_eval` tool allows Claude to evaluate Lisp code directly within the Lisply environment with these parameters:
+The `lisp_eval` tool allows Claude to evaluate Lisp code directly
+within the Lisply environment with these parameters:
 
 - `code` (required): The Lisp code to evaluate
 - `package` (optional): The package to use for the evaluation
@@ -539,7 +559,8 @@ Example usage with STDIO mode (for debugging):
 
 #### HTTP Request Tool (`http_request`)
 
-The `http_request` tool enables Claude to interact with any HTTP endpoint exposed by Lisply:
+The `http_request` tool enables the AI Agent to interact with any HTTP
+endpoint exposed by the Lisply backend:
 
 ```json
 {
@@ -580,12 +601,12 @@ First, let's create the box with the specified dimensions:
 (defparameter *my-box* (make-object 'box 
                          :width 10 
                          :height 5 
-                         :depth 3))
+                         :length 3))
 
 ;; Let's verify the dimensions
 (list (theo *my-box* width)
       (theo *my-box* height)
-      (theo *my-box* depth))
+      (theo *my-box* length))
 ```
 
 Now, let's change the height from 5 to 8:
@@ -598,27 +619,30 @@ Now, let's change the height from 5 to 8:
 (defparameter *new-box* (make-object 'box 
                          :width 10 
                          :height 8  ;; Updated height
-                         :depth 3))
+                         :length 3))
 
 ;; Verify the new dimensions of original box
 (list (theo *my-box* width)
       (theo *my-box* height)
-      (theo *my-box* depth))
+      (theo *my-box* length))
 ```
 
 You can visualize this box by creating a web interface or using
-built-in visualization tools.
+built-in visualization tools. See [Gendl
+Documentation](https://gornschool.com) for details.
 
-Would you like me to show you how to create a more complex parametric
-object or how to set up visualization?
 
 ### Example 2: Demonstrating the Difference Between HTTP and Stdio Modes
 
-**User**: "Can you show me the difference between HTTP and stdio modes by evaluating a simple expression that prints something and returns a value?"
+**User**: "Can you show me the difference between HTTP and stdio modes
+by evaluating a simple expression that prints something to standard
+output and returns a value?"
 
-**Claude**:
+**AI Agent**:
 
-I'll demonstrate the difference between HTTP and stdio modes by evaluating a simple Lisp expression that both prints output and returns a value.
+I'll demonstrate the difference between HTTP and stdio modes by
+evaluating a simple Lisp expression that both prints output and
+returns a value.
 
 First, let's use HTTP mode (the default):
 
@@ -648,9 +672,13 @@ This is a message to standard output
 6
 ```
 
-Notice the difference: HTTP mode provides a structured response with labeled Result and Stdout sections, while stdio mode gives you the raw REPL output exactly as it appears in the Lisp REPL.
+Notice the difference: HTTP mode provides a structured response with
+labeled Result and Stdout sections, while stdio mode gives you the raw
+REPL output exactly as it appears in the Lisp REPL.
 
-Stdio mode is particularly useful for debugging because it can show you interactive debugger prompts. For example, if we introduce an error:
+Stdio mode is particularly useful for debugging because it can show
+you interactive debugger prompts. For example, if we introduce an
+error:
 
 ```lisp
 ;; Using mode: stdio
@@ -667,7 +695,9 @@ About to generate an error
 > Type :help for debugging options
 ```
 
-This allows Claude to interact with the debugger directly. In HTTP mode, you would just get an error message without the interactive capabilities.
+This allows Claude to interact with the debugger directly. In HTTP
+mode, you would just get an error message without the interactive
+capabilities.
 
 ## Troubleshooting
 
@@ -772,14 +802,27 @@ docker system info
 
 ## License
 
-This software is licensed under the GNU Affero General Public License v3.0 (AGPL-3.0), the same license used by Gendl.
+This software is licensed under the GNU Affero General Public License
+v3.0 (AGPL-3.0), the same license used by Gendl.
 
 ### License Implications
 
-**Important Note**: Simply using this MCP server to interact with Gendl and obtain outputs does not trigger the requirements of the AGPL. You can use this wrapper to interact with Gendl without being required to share your code.
+**Important Note**: Simply using this MCP server to interact with
+Gendl and obtain outputs does not trigger the requirements of the
+AGPL. You can use this wrapper to interact with Gendl without being
+required to share your code.
 
-However, if you modify this wrapper and host a service based on the modified software, the AGPL would require you to share your modifications with the users of that service. In other words, if you run a modified version of this software as a network service, you must make the modified source code available to the users of that service.
+However, if you modify this wrapper or a license-compatible backend
+such as Gendl, and distribute and/or host a service based on that
+result, then the AGPL would require you to share your modifications
+with the recipients of the distribution or users of that service. Of
+course if you have any doubts the standard advice is to consult an
+attorney.
 
-For applications that need to keep their source code closed, Genworks offers an "AGPL escape clause" in the form of a 5% self-reported quarterly royalty. More information and a payment gateway are available at [payments.genworks.com](https://payments.genworks.com).
+For applications that need to keep their source code closed, Genworks
+offers an "AGPL Escape Clause" in the form of a 5% self-reported
+quarterly royalty. More information and a payment gateway will be
+available at [payments.genworks.com](https://payments.genworks.com).
 
-The full text of the license can be found in the COPYING.txt file in this directory.
+The full text of the license can be found in the COPYING.txt file in
+this directory.
