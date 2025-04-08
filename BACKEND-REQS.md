@@ -16,6 +16,8 @@ A Lisply backend must provide an HTTP server that exposes the following endpoint
 - `/lisply/lisp-eval`: Endpoint for evaluating Lisp expressions
 - `/lisply/tools/list`: Endpoint that returns a list of available tools
 
+Note: The endpoint prefix (`/lisply/`) can be configured in the MCP wrapper, but backends should support this as the default.
+
 ### 2. Lisp Evaluation Protocol
 
 The backend must support Lisp code evaluation through the `/lisply/lisp-eval` endpoint with the following characteristics:
@@ -119,29 +121,40 @@ The backend must expose a list of its capabilities through the `/lisply/tools/li
 For enhanced integration with development environments:
 
 - **SWANK Protocol**: Support for connecting via SWANK (Superior Lisp Interaction Mode for Emacs) for Lisply backends which support that (e.g. Common Lisp based backends)
-- **Default Port**: 4200 (customizable)
+- **Default Port**: 4200 (internal to container) / 4201 (visible on docker host)
 
 ### 2. Interactive Debugger
 
 For local deployments, provide interactive debugging capabilities:
 
 - Interactive REPL via stdio mode
-- Debugger interface
-- Support for commands like abort, continue, etc.
+- Debugger interface with the ability to:
+  - Display debug information for errors
+  - Present multiple restart options
+  - Support for common debugging commands (abort, continue, backtrace, etc.)
+  - Return to normal evaluation upon command
+- Proper handling of debugger prompt detection (implementation-specific)
 
-### 3. HTTPS Support
+### 3. Communication Modes
+
+Support for multiple evaluation modes:
+
+- **HTTP Mode**: Structured communication with separate result and stdout fields
+- **Stdio Mode**: Direct REPL-like experience with raw output formatting and debugger support
+
+### 4. HTTPS Support
 
 For secure deployments:
 
 - HTTPS server with valid certificates
-- Default port: 9443 (customizable)
+- Default port: 9443 (internal to container) / 9444 (visible on docker host)
 
-### 4. Telnet Interface
+### 5. Telnet Interface
 
 For legacy access methods:
 
 - Telnet server for direct Lisp interaction
-- Default port: 4023 (customizable)
+- Default port: 4023 (internal to container) / 4024 (visible on docker host)
 
 ## Containerization Support
 
@@ -187,6 +200,11 @@ To test a backend for compliance, implement the following checks:
    ```
    POST /lisply/lisp-eval
    {"code": "(package-name *package*)", "package": "gdl-user"}
+   ```
+5. Mode selection:
+   ```
+   POST /lisply/lisp-eval
+   {"code": "(+ 1 2 3)", "mode": "stdio"}
    ```
 
 A successful implementation should respond correctly to all these tests.

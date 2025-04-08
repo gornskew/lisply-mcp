@@ -29,6 +29,9 @@ we welcome more [compliant](BACKEND-REQS.md) Lisply systems.
   - [Existing Service Detection](#existing-service-detection)
   - [Volume Mounting](#volume-mounting)
 - [Usage Examples](#usage-examples)
+- [Communication Modes](#communication-modes)
+  - [HTTP Mode](#http-mode)
+  - [Stdio Mode](#stdio-mode)
 - [Claude Integration](#claude-integration)
   - [Tools for Claude](#tools-for-claude)
   - [Claude Desktop Configuration](#claude-desktop-configuration)
@@ -51,7 +54,7 @@ system](BACKEND-REQS.md). This wrapper enables Claude to:
 ## Architecture
 
 The MCP wrapper implements the Model Context Protocol (MCP) to connect
-Claude with Gendl's capabilities. Here's how the components interact:
+Claude with Lisply backend capabilities. Here's how the components interact:
 
 
 ```mermaid
@@ -98,7 +101,7 @@ The wrapper script handles:
 1. Starting and managing a Lisply Docker container if needed
 2. Routing requests between Claude and the Lisply Backend
 3. Translating between the MCP protocol and the backend [Lisply
-   API](BACKEND.md)
+   API](BACKEND-REQS.md)
 4. Error handling and logging
 
 
@@ -112,7 +115,8 @@ The wrapper script handles:
 - **Detailed Logging**: Detailed logs with timestamps and optional debug mode for more verbosity
 - **Automatic Docker Image Selection**: Sensible defaults based on cloned branch and selected backend type
 - **DockerHub Authentication**: Auto-pulls latest container images with authentication handling
-- **Existing Service Detection**: Relies on existing live services when available, avoiding the need to start & stop a dedicated container 
+- **Existing Service Detection**: Relies on existing live services when available, avoiding the need to start & stop a dedicated container
+- **Multiple Communication Modes**: Support for both HTTP and stdio communication with interactive debugging capabilities
 
 ## Installation
 
@@ -139,59 +143,79 @@ or environment variables.
 
 ```bash
 Options:
-  -H, --host <host>            Lisply server host (default: 127.0.0.1)
-  --swank-host-port <port>     SWANK port on host system (default: 4201)
-  --http-host-port <port>      HTTP port on host system (default: 9081)
-  --https-host-port <port>     HTTPS port on host system (default: 9444)
-  --telnet-host-port <port>    TELNET port on host system (default: 4024)
-  --http-port <port>           HTTP port inside container (default: 9080)
-  --https-port <port>          HTTPS port inside container (default: 9443)
-  --swank-port <port>          SWANK port inside container (default: 4200)
-  --telnet-port <port>         TELNET port inside container (default: 4023)
-  --docker-image <image>       Docker image for Lisply services (default: `dcooper8/gendl:<branch>-<lisp-impl>`)
-  --lisp-impl <impl>           Lisp implementation to use, e.g. ccl or sbcl for `dcooper8/gendl` (default: ccl)
-  --no-auto-start              Do not auto-start Gendl docker container if live service not available (resulting in an error exit).
-  --docker-socket <path>       Path to docker socket (needed if running this nodejs wrapper inside a docker container) (default: /var/run/docker.sock)
-  --log-file <path>            Path to log file of this script (default: /tmp/mcp-wrapper.log)
-  --debug                      Enable debug logging (more verbose)
-  --mount <mounts...>          Mount volumes in format "src:dst" (can specify multiple times)
-  --start-http                 Start HTTP service in Gendl container (required)(default: true)
-  --start-https                Start HTTPS service in Gendl container (default: false)
-  --start-swank                Start SWANK service in Gendl container (default: true)
-  --start-telnet               Start TELNET service in Gendl container (default: false)
-  -h, --help                   Display help for command
+  -H, --backend-host <host>            Lisply server host (default: 127.0.0.1)
+  --swank-host-port <port>             SWANK port on host system (external) (default: 4201)
+  --http-host-port <port>              HTTP port on host system (external) (default: 9081)
+  --https-host-port <port>             HTTPS port on host system (external) (default: 9444)
+  --telnet-host-port <port>            TELNET port on host system (external) (default: 4024)
+  --http-port <port>                   HTTP port inside container (internal) (default: 9080)
+  --https-port <port>                  HTTPS port inside container (internal) (default: 9443)
+  --swank-port <port>                  SWANK port inside container (internal) (default: 4200)
+  --telnet-port <port>                 TELNET port inside container (internal) (default: 4023)
+  --image-base-name <n>                Base name for Docker image (default: dcooper8/gendl)
+  --image-branch <branch>              Branch to use for Docker image (default: auto-detected)
+  --docker-image <image>               Full Docker image for backend (overrides base name and branch)
+  --lisp-impl <impl>                   Lisp implementation to use, ccl or sbcl (default: ccl)
+  --no-auto-start                      Do not auto-start backend docker container if not running
+  --docker-socket <path>               Path to docker socket (default: /var/run/docker.sock)
+  --log-file <path>                    Path to log file (default: /tmp/lisply-mcp-wrapper.log)
+  --debug                              Enable debug logging
+  --mount <mounts...>                  Mount volumes in format "src:dst" (can specify multiple times)
+  --start-http                         Start HTTP service in backend container (default: true)
+  --start-https                        Start HTTPS service in backend container (default: false)
+  --start-swank                        Start SWANK service in backend container (default: true)
+  --start-telnet                       Start TELNET service in backend container (default: false)
+  --no-use-stdio                       Disable stdio capability for local containers
+  --repl-prompt <pattern>              REPL prompt pattern to detect Lisp evaluation completion (default: ?)
+  --eval-timeout <ms>                  Timeout for Lisp evaluation in milliseconds (default: 30000)
+  --endpoint-prefix <prefix>           Prefix for all endpoints (default: lisply)
+  --lisp-eval-endpoint <n>             Endpoint name for Lisp evaluation (default: lisp-eval)
+  --http-request-endpoint <n>          Endpoint name for HTTP requests (default: http-request)
+  --ping-endpoint <n>                  Endpoint name for ping (default: ping-lisp)
+  -h, --help                           Display help for command
 ```
 
 ### Environment Variables
 
-The script also supports configuration via environment variables:
+The script also supports configuration via environment variables. You can specify variables with the "LISPLY_" prefix or with no prefix:
+
+**Note:** It's important to distinguish between host ports (visible on the host system) and container ports (internal to the container):
 
 | Environment Variable | Description | Default |
 |----------------------|-------------|---------|
-| `GENDL_HOST` | Gendl server host | 127.0.0.1 |
-| `SWANK_HOST_PORT` | SWANK port on host system | 5200 |
-| `HTTP_HOST_PORT` | HTTP port on host system | 10080 |
-| `HTTPS_HOST_PORT` | HTTPS port on host system | 10443 |
-| `TELNET_HOST_PORT` | TELNET port on host system | 5023 |
-| `HTTP_PORT` | HTTP port inside container | 9080 |
-| `HTTPS_PORT` | HTTPS port inside container | 9443 |
-| `SWANK_PORT` | SWANK port inside container | 4200 |
-| `TELNET_PORT` | TELNET port inside container | 4023 |
-| `START_HTTP` | Enable HTTP service | true |
-| `START_HTTPS` | Enable HTTPS service | false |
-| `START_SWANK` | Enable SWANK service | true |
-| `START_TELNET` | Enable TELNET service | false |
-| `GENDL_DOCKER_IMAGE` | Docker image for Gendl | (auto-detected) |
-| `GENDL_LISP_IMPL` | Lisp implementation to use | ccl |
-| `GENDL_AUTO_START` | Enable auto-starting container | true |
-| `DOCKER_SOCKET` | Path to Docker socket | /var/run/docker.sock |
-| `GENDL_LOG_FILE` | Path to log file | /tmp/mcp-wrapper.log |
-| `DEBUG_GENDL` | Enable debug logging | false |
-| `GENDL_MOUNTS` | Comma-separated mount points | (none) |
+| `BACKEND_HOST` or `LISPLY_BACKEND_HOST` | Lisply server host | 127.0.0.1 |
+| `SWANK_HOST_PORT` or `LISPLY_SWANK_HOST_PORT` | SWANK port on host system (external) | 4201 |
+| `HTTP_HOST_PORT` or `LISPLY_HTTP_HOST_PORT` | HTTP port on host system (external) | 9081 |
+| `HTTPS_HOST_PORT` or `LISPLY_HTTPS_HOST_PORT` | HTTPS port on host system (external) | 9444 |
+| `TELNET_HOST_PORT` or `LISPLY_TELNET_HOST_PORT` | TELNET port on host system (external) | 4024 |
+| `HTTP_PORT` or `LISPLY_HTTP_PORT` | HTTP port inside container (internal) | 9080 |
+| `HTTPS_PORT` or `LISPLY_HTTPS_PORT` | HTTPS port inside container (internal) | 9443 |
+| `SWANK_PORT` or `LISPLY_SWANK_PORT` | SWANK port inside container (internal) | 4200 |
+| `TELNET_PORT` or `LISPLY_TELNET_PORT` | TELNET port inside container (internal) | 4023 |
+| `START_HTTP` or `LISPLY_START_HTTP` | Enable HTTP service | true |
+| `START_HTTPS` or `LISPLY_START_HTTPS` | Enable HTTPS service | false |
+| `START_SWANK` or `LISPLY_START_SWANK` | Enable SWANK service | true |
+| `START_TELNET` or `LISPLY_START_TELNET` | Enable TELNET service | false |
+| `DOCKER_IMAGE` or `LISPLY_DOCKER_IMAGE` | Docker image for backend | (auto-detected) |
+| `IMAGE_BASE` or `LISPLY_IMAGE_BASE` | Base name for Docker image | dcooper8/gendl |
+| `IMAGE_BRANCH` or `LISPLY_IMAGE_BRANCH` | Branch for Docker image | (auto-detected) |
+| `LISP_IMPL` or `LISPLY_LISP_IMPL` | Lisp implementation to use | ccl |
+| `AUTO_START` or `LISPLY_AUTO_START` | Enable auto-starting container | true |
+| `DOCKER_SOCKET` or `LISPLY_DOCKER_SOCKET` | Path to Docker socket | /var/run/docker.sock |
+| `LOG_FILE` or `LISPLY_LOG_FILE` | Path to log file | /tmp/lisply-mcp-wrapper.log |
+| `DEBUG_MODE` or `LISPLY_DEBUG_MODE` | Enable debug logging | false |
+| `MOUNTS` or `LISPLY_MOUNTS` | Comma-separated mount points | (none) |
+| `USE_STDIO` or `LISPLY_USE_STDIO` | Enable stdio capability | true |
+| `REPL_PROMPT` or `LISPLY_REPL_PROMPT` | REPL prompt pattern | ? (depends on implementation) |
+| `EVAL_TIMEOUT` or `LISPLY_EVAL_TIMEOUT` | Timeout for Lisp evaluation in ms | 30000 |
+| `ENDPOINT_PREFIX` or `LISPLY_ENDPOINT_PREFIX` | Prefix for all endpoints | lisply |
+| `LISP_EVAL_ENDPOINT` or `LISPLY_LISP_EVAL_ENDPOINT` | Endpoint name for Lisp evaluation | lisp-eval |
+| `HTTP_REQUEST_ENDPOINT` or `LISPLY_HTTP_REQUEST_ENDPOINT` | Endpoint name for HTTP requests | http-request |
+| `PING_ENDPOINT` or `LISPLY_PING_ENDPOINT` | Endpoint name for ping | ping-lisp |
 
 ## Docker Integration
 
-The MCP wrapper integrates closely with Docker to manage Gendl containers efficiently.
+The MCP wrapper integrates closely with Docker to manage Lisply containers efficiently.
 
 ### Docker Image Selection
 
@@ -210,11 +234,13 @@ The wrapper automatically selects the appropriate Docker image based on the curr
 
 3. You can override the automatic selection with:
    - The `--docker-image` command-line argument
-   - The `GENDL_DOCKER_IMAGE` environment variable
+   - The `--image-base-name` and `--image-branch` arguments
+   - The `LISPLY_DOCKER_IMAGE` environment variable
+   - The `LISPLY_IMAGE_BASE` and `LISPLY_IMAGE_BRANCH` environment variables
 
 4. For the Lisp implementation:
    - Specify with `--lisp-impl` (ccl or sbcl)
-   - Or use the `GENDL_LISP_IMPL` environment variable
+   - Or use the `LISPLY_LISP_IMPL` environment variable
    - Defaults to ccl if not specified
 
 ### Docker Hub Authentication
@@ -229,7 +255,7 @@ The wrapper will attempt to pull the latest version of the appropriate Docker im
 
 ### Existing Service Detection
 
-The wrapper will check if a Gendl service is already running on the specified host and ports before attempting to start a container:
+The wrapper will check if a Lisply service is already running on the specified host and ports before attempting to start a container:
 
 1. HTTP service (HTTP_HOST_PORT) is checked first as the primary service
 2. SWANK service (SWANK_HOST_PORT) is checked as a fallback
@@ -239,7 +265,7 @@ The wrapper will check if a Gendl service is already running on the specified ho
 **Important:** When an existing service is detected on the specified host and port:
 
 1. All Docker-related settings will be ignored:
-   - `--docker-image` and `--lisp-impl`
+   - `--docker-image`, `--image-base-name`, `--image-branch`, and `--lisp-impl`
    - `--mount` volume options
    - `--start-*` service flags
    - `--*-port` internal container port settings
@@ -248,11 +274,11 @@ The wrapper will check if a Gendl service is already running on the specified ho
 
 2. The wrapper will display warnings about which settings are being ignored
 
-This ensures the wrapper works properly with external Gendl services while giving clear feedback about ignored configuration options.
+This ensures the wrapper works properly with external Lisply services while giving clear feedback about ignored configuration options.
 
 ### Volume Mounting
 
-You can mount host directories into the Gendl container to share files between your host system and the container:
+You can mount host directories into the Lisply container to share files between your host system and the container:
 
 ```bash
 node mcp-wrapper.js --mount /home/user/projects:/projects
@@ -265,8 +291,54 @@ node mcp-wrapper.js --mount /home/user/projects:/projects --mount /home/user/dat
 
 Or using environment variables:
 ```bash
-GENDL_MOUNTS=/home/user/projects:/projects,/home/user/data:/data node mcp-wrapper.js
+LISPLY_MOUNTS=/home/user/projects:/projects,/home/user/data:/data node mcp-wrapper.js
 ```
+
+## Communication Modes
+
+The Lisply MCP wrapper supports two primary modes of communication with the Lisply backend: HTTP mode and stdio mode.
+
+### HTTP Mode
+
+HTTP mode is the default communication method and works with both local and remote Lisply backends.
+
+**Characteristics:**
+- Structured responses with separate result and stdout fields
+- Error handling that captures and returns errors as strings
+- Compatible with all Lisply backends, local or remote
+- Suitable for most use cases
+- Response format: `Result: <result>, Stdout: <output>`
+
+**Example response in HTTP mode:**
+```
+Result: 6, Stdout: This is a message to standard output
+```
+
+### Stdio Mode
+
+Stdio mode provides a direct REPL experience for local containers and supports interactive debugging capabilities.
+
+**Characteristics:**
+- Raw REPL-like output without structured formatting
+- Support for interactive debugger when errors occur
+- Only available for local containers started by the MCP wrapper
+- Ideal for development, debugging, and complex interactions
+- Preserves exactly what the REPL outputs
+
+**Example response in stdio mode:**
+```
+This is a message to standard output
+6
+```
+
+**Debugger Support:**
+When an error occurs in stdio mode, the Lisp debugger can be activated, allowing Claude to interact with it. The wrapper detects debugger prompts and provides metadata about the debugger state to Claude.
+
+**Mode Selection:**
+- Default mode is HTTP
+- To use stdio mode, specify `mode: "stdio"` in the `lisp_eval` tool parameters
+- Stdio capability can be disabled with the `--no-use-stdio` flag or `LISPLY_USE_STDIO=false`
+- If stdio mode is requested but not available, the wrapper will fall back to HTTP mode
 
 ## Usage Examples 
 
@@ -275,16 +347,16 @@ All the below examples can be tested on command line and used in
 
 ### Basic Usage
 
-Run with default settings (localhost:5200):
+Run with default settings (localhost:9081):
 ```bash
 node mcp-wrapper.js
 ```
 
 ### Custom Host and Port
 
-Specify a custom Gendl server:
+Specify a custom Lisply server:
 ```bash
-node mcp-wrapper.js --host 192.168.1.100 --swank-host-port 5200 --http-host-port 10080
+node mcp-wrapper.js --backend-host 192.168.1.100 --swank-host-port 4201 --http-host-port 9081
 ```
 
 ### Custom Lisp Implementation
@@ -303,7 +375,7 @@ node mcp-wrapper.js --start-http --start-https
 
 Or using environment variables:
 ```bash
-START_HTTP=true START_HTTPS=true node mcp-wrapper.js
+LISPLY_START_HTTP=true LISPLY_START_HTTPS=true node mcp-wrapper.js
 ```
 
 ### Configuring Internal Container Ports
@@ -315,7 +387,14 @@ node mcp-wrapper.js --http-port 9080 --https-port 9443 --swank-port 4200 --telne
 
 Or using environment variables:
 ```bash
-HTTP_PORT=9080 HTTPS_PORT=9443 SWANK_PORT=4200 TELNET_PORT=4023 node mcp-wrapper.js
+LISPLY_HTTP_PORT=9080 LISPLY_HTTPS_PORT=9443 LISPLY_SWANK_PORT=4200 LISPLY_TELNET_PORT=4023 node mcp-wrapper.js
+```
+
+### Customizing Endpoints
+
+Customize the endpoint prefix and names:
+```bash
+node mcp-wrapper.js --endpoint-prefix mylisp --lisp-eval-endpoint evaluate --ping-endpoint health-check
 ```
 
 ### Running in a Container
@@ -327,25 +406,25 @@ docker run -v /var/run/docker.sock:/var/run/docker.sock -v /path/to/scripts:/app
 
 ## Claude Integration
 
-This wrapper enables Claude to interact with Gendl through the Model Context Protocol (MCP).
+This wrapper enables Claude to interact with Lisply through the Model Context Protocol (MCP).
 
 ### Tools for Claude
 
-The MCP wrapper exposes several tools that Claude can use to interact with Gendl:
+The MCP wrapper exposes several tools that Claude can use to interact with Lisply:
 
 #### Lisp Evaluation Tool
 
-The `lisp_eval` tool allows Claude to evaluate Lisp code directly within the Gendl environment. This enables Claude to:
+The `lisp_eval` tool allows Claude to evaluate Lisp code directly within the Lisply environment. This enables Claude to:
 
-- Create and manipulate GDL objects
-- Perform complex calculations using Gendl's geometric primitives
-- Access and modify Gendl's state
+- Create and manipulate Lisp objects
+- Perform complex calculations using Lisp primitives
+- Access and modify the Lisp environment state
 
 The tool accepts the following parameters:
 
 - `code` (required): The Lisp code to evaluate
 - `package` (optional): The package to use for the evaluation
-- `mode` (optional): The mode to use to talk to Gendl
+- `mode` (optional): The mode to use to talk to Lisply
   - `http` (default): Uses HTTP communication for structured responses
   - `stdio`: Uses standard input/output communication for a raw REPL experience
 
@@ -376,7 +455,7 @@ Example usage with STDIO mode (for debugging):
 
 #### HTTP Request Tool
 
-The `http_request` tool enables Claude to interact with any HTTP endpoint exposed by Gendl:
+The `http_request` tool enables Claude to interact with any HTTP endpoint exposed by Lisply:
 
 ```json
 {
@@ -388,20 +467,12 @@ The `http_request` tool enables Claude to interact with any HTTP endpoint expose
 }
 ```
 
-#### Knowledge Base Integration
-
-The `query_gendl_kb` tool allows Claude to search for information about Gendl/GDL (General-purpose Declarative Language):
-
-```
-query_gendl_kb("How do I create a box in GDL?")
-```
-
 #### Ping Tool
 
-The `ping_gendl` tool lets Claude check if the Gendl server is available:
+The `ping_lisp` tool lets Claude check if the Lisply server is available:
 
 ```
-ping_gendl()
+ping_lisp()
 ```
 
 ### Claude Desktop Configuration
@@ -426,7 +497,7 @@ Here's an example of how to configure Claude Desktop to use this wrapper:
         "/projects"
       ]
     },
-    "gendl": {
+    "lisply": {
       "command": "wsl",
       "args": [
         "node",
@@ -447,13 +518,13 @@ Here's an example of how to configure Claude Desktop to use this wrapper:
 
 ### Example 1: Creating a Parametric Box
 
-In this example, Claude creates a parametric box in Gendl and then modifies its properties based on user requirements.
+In this example, Claude creates a parametric box in the Lisply environment and then modifies its properties based on user requirements.
 
-**User**: "Can you create a box in Gendl with width 10, height 5, and depth 3? Then show me how to change the height to 8."
+**User**: "Can you create a box with width 10, height 5, and depth 3? Then show me how to change the height to 8."
 
 **Claude**:
 
-I'll create a parametric box in Gendl using the lisp_eval tool, then show you how to modify its height.
+I'll create a parametric box using the lisp_eval tool, then show you how to modify its height.
 
 First, let's create the box with the specified dimensions:
 
@@ -490,56 +561,68 @@ Now, let's change the height from 5 to 8:
       (theo *my-box* depth))
 ```
 
-You can visualize this box by creating a GWL web interface or using
-Gendl's built-in visualization tools.
+You can visualize this box by creating a web interface or using
+built-in visualization tools.
 
 Would you like me to show you how to create a more complex parametric
 object or how to set up visualization?
 
-### Example 2: Querying the Knowledge Base for GDL Information
+### Example 2: Demonstrating the Difference Between HTTP and Stdio Modes
 
-**User**: "How do I create a cylinder in GDL and what parameters does
-it accept?"
+**User**: "Can you show me the difference between HTTP and stdio modes by evaluating a simple expression that prints something and returns a value?"
 
 **Claude**:
 
-I'll use the Gendl knowledge base to find information about creating
-cylinders in GDL:
+I'll demonstrate the difference between HTTP and stdio modes by evaluating a simple Lisp expression that both prints output and returns a value.
 
-The basic syntax for creating a cylinder in GDL is:
-
-```lisp
-(make-object 'cylinder :radius 5 :height 8)
-```
-
-The main parameters for cylinders are:
-- `:radius` - The radius of the cylinder (default is 1)
-- `:height` - The height of the cylinder (default is 1)
-- `:orientation` - The orientation matrix normally created with `alignment`
-- `:center` - The center point (default is (make-point 0 0 0))
-
-Here's a complete example:
+First, let's use HTTP mode (the default):
 
 ```lisp
-(in-package :gdl-user)
-
-(defparameter *my-cylinder* (make-object 'cylinder 
-                              :radius 2.5
-                              :height 10
-                              :orientation 
-							  (alignment :rear (the (face-normal-vector :top)))))
-
-;; Verify the parameters
-(list (theo *my-cylinder* radius)
-      (theo *my-cylinder* height)
-      (theo *my-cylinder* center))
+(progn 
+  (format t "This is a message to standard output~%") 
+  (+ 1 2 3))
 ```
 
-Note that the `:display-controls` is a plist of display properties
-e.g. `:color` for rendering
+Response in HTTP mode:
+```
+Result: 6, Stdout: This is a message to standard output
+```
 
+Now, let's use stdio mode for the same expression:
 
-Would you like me to explain any other aspects of working with cylinders in GDL?
+```lisp
+;; Using mode: stdio
+(progn 
+  (format t "This is a message to standard output~%") 
+  (+ 1 2 3))
+```
+
+Response in stdio mode:
+```
+This is a message to standard output
+6
+```
+
+Notice the difference: HTTP mode provides a structured response with labeled Result and Stdout sections, while stdio mode gives you the raw REPL output exactly as it appears in the Lisp REPL.
+
+Stdio mode is particularly useful for debugging because it can show you interactive debugger prompts. For example, if we introduce an error:
+
+```lisp
+;; Using mode: stdio
+(progn
+  (format t "About to generate an error~%")
+  (/ 1 0))
+```
+
+In stdio mode, you might see something like:
+```
+About to generate an error
+> Error: Division by zero
+> While executing: /
+> Type :help for debugging options
+```
+
+This allows Claude to interact with the debugger directly. In HTTP mode, you would just get an error message without the interactive capabilities.
 
 ## Troubleshooting
 
@@ -547,7 +630,7 @@ Would you like me to explain any other aspects of working with cylinders in GDL?
 
 #### Container Won't Start
 
-If the Gendl container fails to start:
+If the Lisply container fails to start:
 
 1. Check if Docker is running:
 ```bash
@@ -556,8 +639,8 @@ docker info
 
 2. Check if the ports are already in use:
 ```bash
-sudo lsof -i :5200
-sudo lsof -i :10080
+sudo lsof -i :4201
+sudo lsof -i :9081
 ```
 
 3. Verify that the Docker image exists:
@@ -572,11 +655,11 @@ docker pull dcooper8/gendl:master-ccl
 
 #### Connection Errors
 
-If Claude can't connect to Gendl:
+If Claude can't connect to Lisply:
 
-1. Check if the Gendl server is running:
+1. Check if the Lisply server is running:
 ```bash
-docker ps | grep gendl
+docker ps | grep lisply
 ```
 
 2. Enable debug logging:
@@ -586,17 +669,17 @@ node mcp-wrapper.js --debug
 
 3. Check the log file:
 ```bash
-tail -f /tmp/mcp-wrapper.log
+tail -f /tmp/lisply-mcp-wrapper.log
 ```
 
-4. Try pinging the Gendl HTTP server:
+4. Try pinging the Lisply HTTP server:
 ```bash
-curl http://localhost:10080/mcp/ping-gendl
+curl http://localhost:9081/lisply/ping-lisp
 ```
 
-5. Try connecting to the Gendl SWANK server:
+5. Try connecting to the Lisply SWANK server:
 ```bash
-telnet localhost 5200
+telnet localhost 4201
 ```
 
 #### Permission Issues
@@ -624,7 +707,7 @@ Use these commands to diagnose issues:
 
 1. Check wrapper logs:
 ```bash
-tail -f /tmp/mcp-wrapper.log
+tail -f /tmp/lisply-mcp-wrapper.log
 ```
 
 2. Check Docker container logs:
@@ -632,9 +715,9 @@ tail -f /tmp/mcp-wrapper.log
 docker logs $(docker ps --filter "name=lisply-mcp" --format "{{.ID}}")
 ```
 
-3. Check Gendl service status:
+3. Check Lisply service status:
 ```bash
-curl http://localhost:10080/mcp/ping-gendl
+curl http://localhost:9081/lisply/ping-lisp
 ```
 
 4. Verify Docker environment:
@@ -655,4 +738,3 @@ However, if you modify this wrapper and host a service based on the modified sof
 For applications that need to keep their source code closed, Genworks offers an "AGPL escape clause" in the form of a 5% self-reported quarterly royalty. More information and a payment gateway are available at [payments.genworks.com](https://payments.genworks.com).
 
 The full text of the license can be found in the COPYING.txt file in this directory.
-
