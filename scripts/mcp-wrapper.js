@@ -47,7 +47,7 @@ function collect(value, previous) {
  * @param {function} transform - Optional function to transform the value
  * @returns {*} The environment variable value or default
  */
-function getEnvVar(name, defaultValue, prefixes = ['', 'LISPLY_', 'LISPY_'], transform = null) {
+function getEnvVar(name, defaultValue, prefixes = ['', 'LISPLY_'], transform = null) {
   // Try each prefix in order
   for (const prefix of prefixes) {
     const fullName = `${prefix}${name}`;
@@ -772,7 +772,7 @@ async function pullLatestBackendImage() {
         logger.warn(`Backend image ${currentImage} does not exist locally`);
         
         // If the current image is already the default, we've run out of options
-        const imageBaseName = options.imageBaseName || process.env.LISPY_IMAGE_BASE || DEFAULT_IMAGE_BASE;
+        const imageBaseName = options.imageBaseName || process.env.LISPLY_IMAGE_BASE || DEFAULT_IMAGE_BASE;
         const defaultImage = `${imageBaseName}:${DEFAULT_BRANCH}-${DEFAULT_IMPL}`;
         if (currentImage === defaultImage) {
           logger.error(`No suitable backend image available`);
@@ -786,7 +786,7 @@ async function pullLatestBackendImage() {
           await execPromise(`docker pull ${defaultImage}`);
           logger.info(`Successfully pulled default backend image`);
           // Update the environment variable with the new value
-          process.env.LISPY_DOCKER_IMAGE = defaultImage;
+          process.env.LISPLY_DOCKER_IMAGE = defaultImage;
           resolve({ success: true, image: defaultImage });
           return;
         } catch (defaultPullError) {
@@ -794,7 +794,7 @@ async function pullLatestBackendImage() {
           try {
             await execPromise(`docker image inspect ${defaultImage}`);
             logger.info(`Using existing local default backend image: ${defaultImage}`);
-            process.env.LISPY_DOCKER_IMAGE = defaultImage;
+            process.env.LISPLY_DOCKER_IMAGE = defaultImage;
             resolve({ success: true, image: defaultImage });
             return;
           } catch (defaultInspectError) {
