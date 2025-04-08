@@ -12,7 +12,7 @@ direct AI-assisted symbolic programming.
 automatically starting and stopping a Gendl container if needed. Work
 is underway to generalize the implementation to support a [Gnu Emacs
 Backend](https://github.com/gornskew/skewed-emacs.git), and subsequently
-we welcome more [compliant](BACKEND-REQS.md) Lispy systems.
+we welcome more [compliant](BACKEND-REQS.md) Lisply systems.
 
 ## Table of Contents
 
@@ -62,23 +62,23 @@ flowchart TB
     Claude <--> MCP("MCP Protocol")
     MCP <--> Wrapper("NodeJS MCP Wrapper")
 
-    Wrapper --> LispyHttp("Lispy HTTP Server")
+    Wrapper --> LisplyHttp("Lisply HTTP Server")
     
     subgraph Docker ["Docker Container"]
-    subgraph LispyExec["Lispy Executable"]
-    LispyHttp
-    LispySwank("Lispy SWANK Server")
+    subgraph LisplyExec["Lisply Executable"]
+    LisplyHttp
+    LisplySwank("Lisply SWANK Server (for CL impls)")
     end
     end
 	
     Wrapper <-- "Manages" --> Docker
 
-    Emacs <-.-> LispySwank
+    Emacs <-.-> LisplySwank
     
-    KB[("Lispy Knowledge Base")] <--> Wrapper
+    KB[("Lisply Knowledge Base")] <--> Wrapper
     
-    LispyHttp --> Endpoints("RESTful Endpoints")
-    LispyHttp --> LispEval("Lisp Evaluation")
+    LisplyHttp --> Endpoints("RESTful Endpoints")
+    LisplyHttp --> LispEval("Lisp Evaluation")
     
     style User fill:#ff9,stroke:#333,stroke-width:2px
     style Claude fill:#f9f,stroke:#333,stroke-width:2px
@@ -86,27 +86,27 @@ flowchart TB
     style Wrapper fill:#bbf,stroke:#333,stroke-width:2px
     style MCP fill:#bbf,stroke:#333,stroke-width:1px
     style Docker fill:#bfb,stroke:#333,stroke-width:2px
-    style LispyExec fill:#8f8,stroke:#333,stroke-width:2px
-    style LispyHttp fill:#bfb,stroke:#333,stroke-width:1px
-    style LispySwank fill:#bfb,stroke:#333,stroke-width:1px
+    style LisplyExec fill:#8f8,stroke:#333,stroke-width:2px
+    style LisplyHttp fill:#bfb,stroke:#333,stroke-width:1px
+    style LisplySwank fill:#bfb,stroke:#333,stroke-width:1px
     style KB fill:#bfb,stroke:#333,stroke-width:1px
     style Endpoints fill:#bfb,stroke:#333,stroke-width:1px
     style LispEval fill:#bfb,stroke:#333,stroke-width:1px
 ```
 
 The wrapper script handles:
-1. Starting and managing a Lispy Docker container if needed
-2. Routing requests between Claude and the Lispy Backend
-3. Translating between the MCP protocol and the backend [Lispy
+1. Starting and managing a Lisply Docker container if needed
+2. Routing requests between Claude and the Lisply Backend
+3. Translating between the MCP protocol and the backend [Lisply
    API](BACKEND.md)
 4. Error handling and logging
 
 
 ## Features
 
-- **Configurable Lispy Host & Port**: Configure via command-line arguments or environment variables
-- **Docker Container Management**: Automatically start Lispy container when needed 
-- **Volume Mounting**: Mount host directories into the Lispy container
+- **Configurable Lisply Host & Port**: Configure via command-line arguments or environment variables
+- **Docker Container Management**: Automatically start Lisply container when needed 
+- **Volume Mounting**: Mount host directories into the Lisply container
 - **Run Self in Docker**: Run this wrapper directly on host or inside a container with Docker socket
 - **Error Handling**: Detection and reporting of errors
 - **Detailed Logging**: Detailed logs with timestamps and optional debug mode for more verbosity
@@ -118,7 +118,7 @@ The wrapper script handles:
 
 1. Install the required dependencies:
 ```bash
-cd /path/to/lispy-mcp/scripts
+cd /path/to/lisply-mcp/scripts
 npm install
 chmod +x mcp-wrapper.js
 ```
@@ -139,7 +139,7 @@ or environment variables.
 
 ```bash
 Options:
-  -H, --host <host>            Lispy server host (default: 127.0.0.1)
+  -H, --host <host>            Lisply server host (default: 127.0.0.1)
   --swank-host-port <port>     SWANK port on host system (default: 4201)
   --http-host-port <port>      HTTP port on host system (default: 9081)
   --https-host-port <port>     HTTPS port on host system (default: 9444)
@@ -148,7 +148,7 @@ Options:
   --https-port <port>          HTTPS port inside container (default: 9443)
   --swank-port <port>          SWANK port inside container (default: 4200)
   --telnet-port <port>         TELNET port inside container (default: 4023)
-  --docker-image <image>       Docker image for Lispy services (default: `dcooper8/gendl:<branch>-<lisp-impl>`)
+  --docker-image <image>       Docker image for Lisply services (default: `dcooper8/gendl:<branch>-<lisp-impl>`)
   --lisp-impl <impl>           Lisp implementation to use, e.g. ccl or sbcl for `dcooper8/gendl` (default: ccl)
   --no-auto-start              Do not auto-start Gendl docker container if live service not available (resulting in an error exit).
   --docker-socket <path>       Path to docker socket (needed if running this nodejs wrapper inside a docker container) (default: /var/run/docker.sock)
@@ -195,7 +195,7 @@ The MCP wrapper integrates closely with Docker to manage Gendl containers effici
 
 ### Docker Image Selection
 
-The wrapper automatically selects the appropriate Docker image based on the current branch in your lispy-mcp repository:
+The wrapper automatically selects the appropriate Docker image based on the current branch in your lisply-mcp repository:
 
 1. The Docker image follows the naming pattern: `dcooper8/gendl:${branch}-${impl}`
    - `${branch}` is the current git branch name with any slashes (`/`) converted to double hyphens (`--`)
@@ -430,7 +430,7 @@ Here's an example of how to configure Claude Desktop to use this wrapper:
       "command": "wsl",
       "args": [
         "node",
-        "/home/user/projects/lispy-mcp/scripts/mcp-wrapper.js",
+        "/home/user/projects/lisply-mcp/scripts/mcp-wrapper.js",
         "--mount", "/home/user/projects:/projects"
       ],
       "env": {
@@ -629,7 +629,7 @@ tail -f /tmp/mcp-wrapper.log
 
 2. Check Docker container logs:
 ```bash
-docker logs $(docker ps --filter "name=lispy-mcp" --format "{{.ID}}")
+docker logs $(docker ps --filter "name=lisply-mcp" --format "{{.ID}}")
 ```
 
 3. Check Gendl service status:

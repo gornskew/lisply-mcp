@@ -39,6 +39,73 @@ function collect(value, previous) {
   return previous.concat([value]);
 }
 
+/**
+ * Helper function to get environment variables with multiple possible prefixes
+ * @param {string} name - Base name of the environment variable
+ * @param {*} defaultValue - Default value if no environment variable is found
+ * @param {Array<string>} prefixes - Prefixes to try (in order of preference)
+ * @param {function} transform - Optional function to transform the value
+ * @returns {*} The environment variable value or default
+ */
+function getEnvVar(name, defaultValue, prefixes = ['', 'LISPLY_', 'LISPY_'], transform = null) {
+  // Try each prefix in order
+  for (const prefix of prefixes) {
+    const fullName = `${prefix}${name}`;
+    if (process.env[fullName] !== undefined) {
+      const value = process.env[fullName];
+      return transform ? transform(value) : value;
+    }
+  }
+  
+  // Fall back to default if no environment variable is found
+  return defaultValue;
+}
+
+/**
+ * Helper function to parse boolean environment variables
+ * @param {string} value - The environment variable value
+ * @param {boolean} defaultValue - Default value if parsing fails
+ * @returns {boolean} The parsed boolean value
+ */
+function parseBool(value, defaultValue = false) {
+  if (value === undefined || value === null) return defaultValue;
+  if (typeof value === 'boolean') return value;
+  if (typeof value === 'number') return value !== 0;
+  if (typeof value === 'string') {
+    const lowered = value.toLowerCase().trim();
+    if (lowered === 'true' || lowered === 'yes' || lowered === '1') return true;
+    if (lowered === 'false' || lowered === 'no' || lowered === '0') return false;
+  }
+  return defaultValue;
+}
+
+/**
+ * Helper function to parse integer environment variables
+ * @param {string} value - The environment variable value
+ * @param {number} defaultValue - Default value if parsing fails
+ * @param {number} min - Optional minimum value
+ * @param {number} max - Optional maximum value
+ * @returns {number} The parsed integer value
+ */
+function parseInt10(value, defaultValue, min = null, max = null) {
+  if (value === undefined || value === null) return defaultValue;
+  if (typeof value === 'number') {
+    const intValue = Math.floor(value);
+    if (min !== null && intValue < min) return min;
+    if (max !== null && intValue > max) return max;
+    return intValue;
+  }
+  try {
+    const intValue = parseInt(value, 10);
+    if (isNaN(intValue)) return defaultValue;
+    if (min !== null && intValue < min) return min;
+    if (max !== null && intValue > max) return max;
+    return intValue;
+  } catch (e) {
+    return defaultValue;
+  }
+}
+
 // Parse command line arguments
 program
     .option('-H, --backend-host <host>', 'Backend server host (default: 127.0.0.1)')
@@ -73,19 +140,54 @@ program
 const options = program.opts();
 
 // Configure the backend server details - Use CLI args, env vars, or defaults
-const BACKEND_HOST = options.backendHost || process.env.BACKEND_HOST || '127.0.0.1';
+const BACKEND_HOST = options.backendHost || getEnvVar('BACKEND_HOST', '127.0.0.1');
+
+// Define port ranges for validation
+const MIN_PORT = 1024;  // Avoid privileged ports
+const MAX_PORT = 65535; // Maximum valid port number
 
 // Host ports (ports exposed on the host system)
-const SWANK_HOST_PORT = parseInt(options.swankHostPort || process.env.SWANK_HOST_PORT || '4201', 10);
-const HTTP_HOST_PORT = parseInt(options.httpHostPort || process.env.HTTP_HOST_PORT || '9081', 10);
-const HTTPS_HOST_PORT = parseInt(options.httpsHostPort || process.env.HTTPS_HOST_PORT || '10443', 10);
-const TELNET_HOST_PORT = parseInt(options.telnetHostPort || process.env.TELNET_HOST_PORT || '5023', 10);
+const SWANK_HOST_PORT = parseInt10(options.swankHostPort || getEnvVar('SWANK_HOST_PORT', '4201'), 4201, MIN_PORT, MAX_PORT);
+const HTTP_HOST_PORT = parseInt10(options.httpHostPort || getEnvVar('HTTP_HOST_PORT', '9081'), 9081, MIN_PORT, MAX_PORT);
+const HTTPS_HOST_PORT = parseInt10(options.httpsHostPort || getEnvVar('HTTPS_HOST_PORT', '10443'), 10443, MIN_PORT, MAX_PORT);
+const TELNET_HOST_PORT = parseInt10(options.telnetHostPort || getEnvVar('TELNET_HOST_PORT', '5023'), 5023, MIN_PORT, MAX_PORT);
 
 // Internal ports (inside the container)
-const HTTP_PORT = parseInt(options.httpPort || process.env.HTTP_PORT || '9080', 10);
-const HTTPS_PORT = parseInt(options.httpsPort || process.env.HTTPS_PORT || '9443', 10);
-const SWANK_PORT = parseInt(options.swankPort || process.env.SWANK_PORT || '4200', 10);
-const TELNET_PORT = parseInt(options.telnetPort || process.env.TELNET_PORT || '4023', 10);
+const HTTP_PORT = parseInt10(options.httpPort || getEnvVar('HTTP_PORT', '9080'), 9080, MIN_PORT, MAX_PORT);
+const HTTPS_PORT = parseInt10(options.httpsPort || getEnvVar('HTTPS_PORT', '9443'), 9443, MIN_PORT, MAX_PORT);
+const SWANK_PORT = parseInt10(options.swankPort || getEnvVar('SWANK_PORT', '4200'), 4200, MIN_PORT, MAX_PORT);
+const TELNET_PORT = parseInt10(options.telnetPort || getEnvVar('TELNET_PORT', '4023'), 4023, MIN_PORT, MAX_PORT);
+
+// Validate ports for potential conflicts
+function checkPortConflicts() {
+  const hostPorts = [
+    { name: 'HTTP', port: HTTP_HOST_PORT },
+    { name: 'HTTPS', port: HTTPS_HOST_PORT },
+    { name: 'SWANK', port: SWANK_HOST_PORT },
+    { name: 'TELNET', port: TELNET_HOST_PORT }
+  ];
+  
+  // Check for duplicate ports
+  const conflicts = [];
+  
+  for (let i = 0; i < hostPorts.length; i++) {
+    for (let j = i + 1; j < hostPorts.length; j++) {
+      if (hostPorts[i].port === hostPorts[j].port) {
+        conflicts.push(`${hostPorts[i].name} and ${hostPorts[j].name} use the same port: ${hostPorts[i].port}`);
+      }
+    }
+  }
+  
+  // Log any conflicts but don't abort
+  if (conflicts.length > 0) {
+    logger.warn(`Detected port conflicts: ${conflicts.join(', ')}`);
+  }
+  
+  return conflicts.length === 0;
+}
+
+// Check for port conflicts
+checkPortConflicts();
 
 // Other configuration
 // Version information
@@ -100,17 +202,17 @@ const DEFAULT_IMAGE_BASE = 'dcooper8/gendl';
 const SUPPORTED_IMPLS = ['ccl', 'sbcl'];
 
 // Get Lisp implementation from arguments or environment variable
-const LISP_IMPL = (options.lispImpl || process.env.LISP_IMPL || process.env.LISPY_LISP_IMPL || DEFAULT_IMPL).toLowerCase();
+const LISP_IMPL = (options.lispImpl || getEnvVar('LISP_IMPL', DEFAULT_IMPL)).toLowerCase();
 
-// Service startup flags
-const START_HTTP = options.startHttp !== false && (process.env.START_HTTP !== 'false'); // Default to true like SWANK
-const START_HTTPS = options.startHttps || process.env.START_HTTPS === 'true' || false;
-const START_SWANK = options.startSwank !== false && (process.env.START_SWANK !== 'false'); // Default to true
-const START_TELNET = options.startTelnet || process.env.START_TELNET === 'true' || false;
+// Service startup flags - use consistent parsing with our helper functions
+const START_HTTP = options.startHttp !== false && parseBool(getEnvVar('START_HTTP', 'true'), true); // Default to true
+const START_HTTPS = parseBool(options.startHttps, false) || parseBool(getEnvVar('START_HTTPS', 'false'), false);
+const START_SWANK = options.startSwank !== false && parseBool(getEnvVar('START_SWANK', 'true'), true); // Default to true
+const START_TELNET = parseBool(options.startTelnet, false) || parseBool(getEnvVar('START_TELNET', 'false'), false);
 
 // Lisp REPL communication configuration
 // Enable stdio capability by default (but http is still the default communication mode)
-const USE_STDIO = options.useStdio !== false && process.env.USE_STDIO !== 'false';
+const USE_STDIO = options.useStdio !== false && parseBool(getEnvVar('USE_STDIO', 'true'), true);
 
 // Default REPL prompts by implementation
 const DEFAULT_PROMPTS = {
@@ -131,12 +233,12 @@ const REPL_PROMPT = options.replPrompt || process.env.REPL_PROMPT || DEFAULT_PRO
 const EVAL_TIMEOUT = parseInt(options.evalTimeout || process.env.EVAL_TIMEOUT || '30000', 10);
 
 // Set up endpoint paths
-const EVAL_ENDPOINT = options.evalEndpoint || process.env.EVAL_ENDPOINT || '/lisply/lisp-eval';
-const PING_ENDPOINT = options.pingEndpoint || process.env.PING_ENDPOINT || '/lisply/ping-lisp';
+const EVAL_ENDPOINT = options.evalEndpoint || getEnvVar('EVAL_ENDPOINT', '/lisply/lisp-eval');
+const PING_ENDPOINT = options.pingEndpoint || getEnvVar('PING_ENDPOINT', '/lisply/ping-lisp');
 
 // Set up logging to file for debugging
-const LOG_FILE = options.logFile || process.env.LOG_FILE || process.env.LISPY_LOG_FILE || '/tmp/lisply-mcp-wrapper.log';
-const DEBUG_MODE = options.debug || process.env.DEBUG_MODE === 'true' || process.env.LISPLY_DEBUG_MODE === 'true';
+const LOG_FILE = options.logFile || getEnvVar('LOG_FILE', '/tmp/lisply-mcp-wrapper.log');
+const DEBUG_MODE = parseBool(options.debug, false) || parseBool(getEnvVar('DEBUG_MODE', 'false'), false);
 let logStream;
 
 try {
@@ -172,14 +274,24 @@ const logger = {
 
 
 /**
- * Helper to safely execute git commands
+ * Helper to safely execute git commands with improved error handling
  * @param {string} cmd - The command to execute
+ * @param {boolean} logError - Whether to log errors (default: true)
  * @returns {string|null} - The command output or null if error
  */
-function safeExec(cmd) {
+function safeExec(cmd, logError = true) {
   try {
     return execSync(cmd, { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] }).trim();
   } catch (error) {
+    if (logError) {
+      // Log at debug level to avoid cluttering logs with expected errors
+      logger.debug(`Error executing command: ${cmd}. Error: ${error.message}`);
+      
+      // Add more details at trace level if available
+      if (error.stderr) {
+        logger.debug(`Command stderr: ${error.stderr}`);
+      }
+    }
     return null;
   }
 }
@@ -287,26 +399,82 @@ const VERSION = versionInfo.version;
 logger.info(`MCP Wrapper Version: ${VERSION}`);
 logger.debug(`Version details: ${JSON.stringify(versionInfo, null, 2)}`);
 
-// Construct Docker image name
+/**
+ * Sanitize a string for use as a Docker image tag
+ * Docker tags must be valid ASCII and may contain lowercase and uppercase letters, digits, underscores, periods and hyphens.
+ * Tags must not start with a period or a hyphen and may contain a maximum of 128 characters.
+ * @param {string} input - String to sanitize
+ * @returns {string} - Sanitized string safe for use as a Docker tag
+ */
+function sanitizeDockerTag(input) {
+  if (!input) return 'unknown';
+  
+  // Replace any characters that aren't letters, numbers, underscores, periods, or hyphens
+  // Convert slashes to double hyphens (common convention for branch names)
+  let sanitized = input
+    .replace(/\//g, '--')
+    .replace(/[^a-zA-Z0-9_.-]/g, '-');
+  
+  // Tags can't start with a period or hyphen
+  sanitized = sanitized.replace(/^[.-]+/, '');
+  
+  // Limit to 128 characters max
+  if (sanitized.length > 128) {
+    sanitized = sanitized.substring(0, 128);
+  }
+  
+  // Ensure we still have a valid tag after all replacements
+  if (!sanitized || sanitized.length === 0) {
+    return 'unknown';
+  }
+  
+  return sanitized;
+}
+
+/**
+ * Construct Docker image name from branch and implementation
+ * @returns {string} - Fully qualified Docker image name
+ */
 function constructDockerImageName() {
-  const branchName = options.imageBranch || process.env.LISPLY_IMAGE_BRANCH || process.env.LISPY_IMAGE_BRANCH || getGitBranch();
-  // Convert any slashes in branch name to double hyphens for Docker image tag
-  const formattedBranch = branchName.replace(/\//g, '--');
+  // Get branch name with fallbacks
+  const branchName = options.imageBranch || 
+                    getEnvVar('IMAGE_BRANCH', getGitBranch());
+  
+  // Sanitize branch name for Docker tag
+  const formattedBranch = sanitizeDockerTag(branchName);
+  
+  // Get implementation with validation
   const impl = SUPPORTED_IMPLS.includes(LISP_IMPL) ? LISP_IMPL : DEFAULT_IMPL;
-  const baseName = options.imageBaseName || process.env.LISPLY_IMAGE_BASE || process.env.LISPY_IMAGE_BASE || DEFAULT_IMAGE_BASE;
+  
+  // Get base name with fallbacks
+  const baseName = options.imageBaseName || 
+                  getEnvVar('IMAGE_BASE', DEFAULT_IMAGE_BASE);
+  
+  // Log the components used to construct the image name
+  logger.debug(`Constructing Docker image name from: Base=${baseName}, Branch=${branchName} (Formatted=${formattedBranch}), Impl=${impl}`);
+  
   return `${baseName}:${formattedBranch}-${impl}`;
 }
 
-const DOCKER_IMAGE = options.dockerImage || process.env.LISPLY_DOCKER_IMAGE || process.env.DOCKER_IMAGE || constructDockerImageName();
-const AUTO_START = options.autoStart !== false && (process.env.LISPLY_AUTO_START !== 'false' && process.env.AUTO_START !== 'false');
-const DOCKER_SOCKET = options.dockerSocket || process.env.LISPLY_DOCKER_SOCKET || process.env.DOCKER_SOCKET || '/var/run/docker.sock';
+const DOCKER_IMAGE = options.dockerImage || getEnvVar('DOCKER_IMAGE', constructDockerImageName());
+const AUTO_START = options.autoStart !== false && parseBool(getEnvVar('AUTO_START', 'true'), true);
+const DOCKER_SOCKET = options.dockerSocket || getEnvVar('DOCKER_SOCKET', '/var/run/docker.sock');
 const MOUNTS = options.mount || []; // Mount points from command line
-const ENV_MOUNTS = process.env.LISPLY_MOUNTS ? process.env.LISPLY_MOUNTS.split(',') : 
-                 (process.env.MOUNTS ? process.env.MOUNTS.split(',') : []); // Mount points from env
+
+// Handle mount points from environment variables with proper parsing
+function getEnvMounts() {
+  const mountsStr = getEnvVar('MOUNTS', '');
+  if (!mountsStr) return [];
+  
+  // Split by comma and filter out empty entries
+  return mountsStr.split(',').filter(mount => mount && mount.trim().length > 0);
+}
+
+const ENV_MOUNTS = getEnvMounts();
 const ALL_MOUNTS = [...MOUNTS, ...ENV_MOUNTS];
 
 // Base path for MCP endpoints
-const MCP_BASE_PATH = process.env.MCP_BASE_PATH || process.env.GENDL_BASE_PATH || '/lisply';
+const LISPLY_BASE_PATH = getEnvVar('LISPLY_BASE_PATH', '/lisply'));
 
 
 
@@ -382,23 +550,23 @@ function checkBackendAvailability() {
 
       res.on('end', () => {
         if (res.statusCode === 200 && responseBody.length > 0) {
-          logger.info(`Gendl service is available. Ping response: ${responseBody}`);
+          logger.info(`Lisply service is available. Ping response: ${responseBody}`);
           resolve(true);
         } else {
-          logger.warn(`Gendl service ping failed. Status: ${res.statusCode}, Response length: ${responseBody.length}`);
+          logger.warn(`Lisply service ping failed. Status: ${res.statusCode}, Response length: ${responseBody.length}`);
           resolve(false);
         }
       });
     });
 
     req.on('timeout', () => {
-      logger.warn('Gendl service ping request timed out');
+      logger.warn('Lisply service ping request timed out');
       req.destroy();
       resolve(false);
     });
 
     req.on('error', (error) => {
-      logger.warn(`Gendl service ping request error: ${error.message}`);
+      logger.warn(`Lisply service ping request error: ${error.message}`);
       resolve(false);
     });
 
@@ -406,23 +574,43 @@ function checkBackendAvailability() {
   });
 }
 
-// Removed unused shouldStartGendlContainer function
-
-// Check if docker is available
+/**
+ * Check if Docker is available for container management
+ * @returns {boolean} - Whether Docker is available
+ */
 function isDockerAvailable() {
   try {
     // Check if we're running in a container
-    const cgroup = fs.readFileSync('/proc/self/cgroup', 'utf8');
-    const isContainer = cgroup.includes('docker');
+    let isContainer = false;
+    
+    try {
+      const cgroup = fs.readFileSync('/proc/self/cgroup', 'utf8');
+      isContainer = cgroup.includes('docker');
+    } catch (e) {
+      // /proc might not be available on all platforms (e.g., Windows)
+      logger.debug(`Could not read cgroup info: ${e.message}`);
+      // Fall back to checking environment variables
+      isContainer = !!process.env.CONTAINER || !!process.env.DOCKER_CONTAINER;
+    }
+    
+    logger.debug(`Running in container: ${isContainer}`);
     
     // If we're in a container, we need the Docker socket to be mounted
     if (isContainer) {
-      return fs.existsSync(DOCKER_SOCKET);
+      const socketExists = fs.existsSync(DOCKER_SOCKET);
+      logger.debug(`Docker socket ${DOCKER_SOCKET} exists: ${socketExists}`);
+      return socketExists;
     }
     
-    // If we're on the host, just check if docker command works
-    execSync('docker --version', { stdio: 'ignore' });
-    return true;
+    // If we're on the host, check if docker command works
+    const dockerVersion = safeExec('docker --version', false);
+    if (dockerVersion) {
+      logger.debug(`Docker available: ${dockerVersion}`);
+      return true;
+    } else {
+      logger.warn('Docker command not found or not working');
+      return false;
+    }
   } catch (error) {
     logger.warn(`Docker does not seem to be available: ${error.message}`);
     return false;
@@ -668,8 +856,9 @@ function startBackendContainer() {
       
       // Generate a unique container name with timestamp
       // Extract the base name from the image for the container name
-      const imageBaseName = dockerImage.split('/').pop().split(':')[0];
-      const containerName = `${imageBaseName}-mcp-${new Date().getTime()}`;
+	const imageBaseName = dockerImage.split('/').pop().split(':')[0];
+	//const containerName = `${imageBaseName}-mcp-${new Date().getTime()}`;
+	const containerName = `lisply-mcp-${new Date().getTime()}`; // name lisply to match README.md
       
       // Prepare docker arguments for spawn
       const dockerArgs = [
@@ -973,8 +1162,6 @@ function setupProcessEvents(rl) {
 }
 
 
-// Removed unused fastTerminateGendlContainer function
-
 // Handle MCP initialization
 function handleInitialize(request) {
   logger.info('Handling initialize request');
@@ -1197,7 +1384,7 @@ function makeHttpRequest(options, body, callback, logPrefix = '') {
   }
 }
 
-// Handle simple ping_gendl tool
+// Handle simple ping_lisp tool
 function handlePingLisp(request) {
   logger.info('Handling ping_lisp request');
   

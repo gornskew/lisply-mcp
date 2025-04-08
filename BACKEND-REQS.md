@@ -118,7 +118,7 @@ The backend must expose a list of its capabilities through the `/lisply/tools/li
 
 For enhanced integration with development environments:
 
-- **SWANK Protocol**: Support for connecting via SWANK (Superior Lisp Interaction Mode for Emacs)
+- **SWANK Protocol**: Support for connecting via SWANK (Superior Lisp Interaction Mode for Emacs) for Lisply backends which support that (e.g. Common Lisp based backends)
 - **Default Port**: 4200 (customizable)
 
 ### 2. Interactive Debugger
