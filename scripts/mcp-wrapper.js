@@ -41,7 +41,7 @@ function collect(value, previous) {
 
 // Parse command line arguments
 program
-    .option('-H, --host <host>', 'Backend server host (default: 127.0.0.1)')
+    .option('-H, --backend-host <host>', 'Backend server host (default: 127.0.0.1)')
     .option('--swank-host-port <port>', 'SWANK port on host system (default: 4201)')
     .option('--http-host-port <port>', 'HTTP port on host system (default: 9081)')
     .option('--https-host-port <port>', 'HTTPS port on host system (default: 9444)')
@@ -56,24 +56,24 @@ program
     .option('--lisp-impl <impl>', 'Lisp implementation to use, ccl or sbcl (default: ccl)')
     .option('--no-auto-start', 'Do not auto-start backend docker container if not running')
     .option('--docker-socket <path>', 'Path to docker socket (default: /var/run/docker.sock)')
-    .option('--log-file <path>', 'Path to log file (default: /tmp/mcp-wrapper.log)')
+    .option('--log-file <path>', 'Path to log file (default: /tmp/lisply-mcp-wrapper.log)')
     .option('--debug', 'Enable debug logging')
     .option('--mount <mounts...>', 'Mount volumes in format "src:dst" (can specify multiple times)', collect, [])
     .option('--start-http', 'Start HTTP service in backend container (default: true)')
     .option('--start-https', 'Start HTTPS service in backend container (default: false)')
-    .option('--start-swank', 'Start SWANK service in backend container (default: true)')
+    .option('--start-swank', 'Start SWANK service in backend container (default: true)') // for CL-based servers
     .option('--start-telnet', 'Start TELNET service in backend container (default: false)')
     .option('--no-use-stdio', 'Disable stdio capability for local containers. When disabled, HTTP mode will always be used even when stdio mode is requested.')
     .option('--repl-prompt <pattern>', 'REPL prompt pattern to detect Lisp evaluation completion (default: ?)')
     .option('--eval-timeout <ms>', 'Timeout for Lisp evaluation in milliseconds (default: 30000)')
     .option('--eval-endpoint <path>', 'HTTP endpoint for Lisp evaluation (default: /mcp/lisp-eval)')
-    .option('--ping-endpoint <path>', 'HTTP endpoint for ping (default: /mcp/ping-gendl)')
+    .option('--ping-endpoint <path>', 'HTTP endpoint for ping (default: /mcp/ping-lisp)')
     .parse(process.argv);
 
 const options = program.opts();
 
 // Configure the backend server details - Use CLI args, env vars, or defaults
-const BACKEND_HOST = options.host || process.env.LISPLY_HOST || process.env.LISPY_HOST || process.env.GENDL_HOST || '127.0.0.1';
+const BACKEND_HOST = options.backendHost || process.env.BACKEND_HOST || '127.0.0.1';
 
 // Host ports (ports exposed on the host system)
 const SWANK_HOST_PORT = parseInt(options.swankHostPort || process.env.SWANK_HOST_PORT || '4201', 10);
@@ -89,7 +89,7 @@ const TELNET_PORT = parseInt(options.telnetPort || process.env.TELNET_PORT || '4
 
 // Other configuration
 // Version information
-const VERSION = '1.0.1';
+// const VERSION = '1.0.1'; // FLAG -- grab this from git branch and/or version
 
 // Constants for Docker image configuration
 const DEFAULT_IMPL = 'ccl';
@@ -100,7 +100,7 @@ const DEFAULT_IMAGE_BASE = 'dcooper8/gendl';
 const SUPPORTED_IMPLS = ['ccl', 'sbcl'];
 
 // Get Lisp implementation from arguments or environment variable
-const LISP_IMPL = (options.lispImpl || process.env.LISPLY_LISP_IMPL || process.env.LISPY_LISP_IMPL || process.env.GENDL_LISP_IMPL || DEFAULT_IMPL).toLowerCase();
+const LISP_IMPL = (options.lispImpl || process.env.LISP_IMPL || process.env.LISPY_LISP_IMPL || DEFAULT_IMPL).toLowerCase();
 
 // Service startup flags
 const START_HTTP = options.startHttp !== false && (process.env.START_HTTP !== 'false'); // Default to true like SWANK
@@ -114,14 +114,16 @@ const USE_STDIO = options.useStdio !== false && process.env.USE_STDIO !== 'false
 
 // Default REPL prompts by implementation
 const DEFAULT_PROMPTS = {
-  'ccl': '?',
-  'sbcl': '*'
+    'ccl': '?',
+    'sbcl': '*',
+    'ielm': 'ELISP>' 
 };
 
 // Debugger prompts by implementation (for future use)
 const DEBUGGER_PROMPTS = {
-  'ccl': '>', // CCL debugger prompt
-  'sbcl': '0]' // SBCL debugger level 0 prompt
+    'ccl': '>', // CCL debugger prompt
+    'sbcl': '0]', // SBCL debugger level 0 prompt
+    'ielm': 'ELISP>' // ielm doesn't have a separate debug level
 };
 
 // Get the appropriate REPL prompt for the selected Lisp implementation
@@ -133,8 +135,8 @@ const EVAL_ENDPOINT = options.evalEndpoint || process.env.EVAL_ENDPOINT || '/lis
 const PING_ENDPOINT = options.pingEndpoint || process.env.PING_ENDPOINT || '/lisply/ping-lisp';
 
 // Set up logging to file for debugging
-const LOG_FILE = options.logFile || process.env.LISPLY_LOG_FILE || process.env.LISPY_LOG_FILE || process.env.GENDL_LOG_FILE || '/tmp/mcp-wrapper.log';
-const DEBUG_MODE = options.debug || process.env.DEBUG_LISPLY === 'true' || process.env.DEBUG_LISPY === 'true' || process.env.DEBUG_GENDL === 'true';
+const LOG_FILE = options.logFile || process.env.LOG_FILE || process.env.LISPY_LOG_FILE || '/tmp/lisply-mcp-wrapper.log';
+const DEBUG_MODE = options.debug || process.env.DEBUG_MODE === 'true' || process.env.LISPLY_DEBUG_MODE === 'true';
 let logStream;
 
 try {
@@ -168,29 +170,126 @@ const logger = {
 };
 
 
-// Function to get the current branch name
-function getCurrentBranch() {
+
+/**
+ * Helper to safely execute git commands
+ * @param {string} cmd - The command to execute
+ * @returns {string|null} - The command output or null if error
+ */
+function safeExec(cmd) {
   try {
-    // Try to read the current branch from git
-    const gitHeadContent = fs.readFileSync(path.join(__dirname, '..', '.git', 'HEAD'), 'utf8').trim();
-    // Check if HEAD points to a branch reference
-    if (gitHeadContent.startsWith('ref: refs/heads/')) {
-      // Extract branch name from ref
-      const branchName = gitHeadContent.substring('ref: refs/heads/'.length);
-      logger.info(`Current git branch detected: ${branchName}`);
-      return branchName;
-    }
-    logger.warn('Git HEAD does not point to a branch reference, using default branch');
-    return DEFAULT_BRANCH;
+    return execSync(cmd, { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] }).trim();
   } catch (error) {
-    logger.warn(`Could not determine current branch: ${error.message}, using default branch`);
-    return DEFAULT_BRANCH;
+    return null;
   }
 }
 
+/**
+ * Get git branch information with multiple detection methods and fallbacks
+ * @returns {string} - The detected branch name or default branch
+ */
+function getGitBranch() {
+  // Try git command first (most reliable)
+  const branch = safeExec('git rev-parse --abbrev-ref HEAD');
+  if (branch && branch !== 'HEAD') {
+    logger.info(`Git branch detected via command: ${branch}`);
+    return branch;
+  }
+  
+  // Fallback to reading .git/HEAD file directly
+  try {
+    const gitHeadContent = fs.readFileSync(path.join(__dirname, '..', '.git', 'HEAD'), 'utf8').trim();
+    if (gitHeadContent.startsWith('ref: refs/heads/')) {
+      const branchName = gitHeadContent.substring('ref: refs/heads/'.length);
+      logger.info(`Git branch detected via HEAD file: ${branchName}`);
+      return branchName;
+    }
+  } catch (error) {
+    logger.debug(`Could not read .git/HEAD file: ${error.message}`);
+  }
+  
+  // Final fallback to default branch
+  logger.warn('Could not determine git branch, using default branch');
+  return DEFAULT_BRANCH;
+}
+
+/**
+ * Get comprehensive version information with fallbacks for non-git environments
+ * @returns {Object} Version information
+ */
+function getVersionInfo() {
+  // Initialize with fallback values
+  const info = {
+    branch: 'unknown',
+    commit: 'unknown',
+    tag: null,
+    dirty: false,
+    date: new Date().toISOString(),
+    version: '1.0.0' // Default version
+  };
+  
+  // Check if we're in a git repo first
+  const isGitRepo = safeExec('git rev-parse --is-inside-work-tree') === 'true';
+  
+  if (isGitRepo) {
+    // Get branch name using our unified function
+    info.branch = getGitBranch();
+    
+    // Get commit hash (short)
+    const commit = safeExec('git rev-parse --short HEAD');
+    if (commit) {
+      info.commit = commit;
+    }
+    
+    // Try to get the latest tag
+    const tag = safeExec('git describe --tags --abbrev=0 2>/dev/null');
+    if (tag) {
+      info.tag = tag;
+    }
+    
+    // Check if working directory is dirty
+    const status = safeExec('git status --porcelain');
+    info.dirty = status && status.length > 0;
+    
+    // Get commit date
+    const date = safeExec('git log -1 --format=%cI');
+    if (date) {
+      info.date = date;
+    }
+    
+    // Construct version string
+    if (info.tag) {
+      // If we have a tag, use tag-commithash format
+      info.version = `${info.tag}-${info.commit}${info.dirty ? '-dirty' : ''}`;
+    } else {
+      // Otherwise use branch-commithash format
+      info.version = `${info.branch}-${info.commit}${info.dirty ? '-dirty' : ''}`;
+    }
+  } else {
+    // Not in a git repo, try to get some system info instead
+    try {
+      const hostname = safeExec('hostname') || 'unknown';
+      const username = process.env.USER || process.env.USERNAME || 'unknown';
+      info.version = `1.0.0-${username}@${hostname}`;
+    } catch (error) {
+      // Keep the default version
+    }
+  }
+  
+  return info;
+}
+
+// Get version info and set VERSION constant
+const versionInfo = getVersionInfo();
+const VERSION = versionInfo.version;
+
+// Log version information
+logger.info(`MCP Wrapper Version: ${VERSION}`);
+logger.debug(`Version details: ${JSON.stringify(versionInfo, null, 2)}`);
+
 // Construct Docker image name
 function constructDockerImageName() {
-  const branchName = options.imageBranch || process.env.LISPLY_IMAGE_BRANCH || process.env.LISPY_IMAGE_BRANCH || getCurrentBranch();
+  const branchName = options.imageBranch || process.env.LISPLY_IMAGE_BRANCH || process.env.LISPY_IMAGE_BRANCH || getGitBranch();
   // Convert any slashes in branch name to double hyphens for Docker image tag
   const formattedBranch = branchName.replace(/\//g, '--');
   const impl = SUPPORTED_IMPLS.includes(LISP_IMPL) ? LISP_IMPL : DEFAULT_IMPL;
@@ -198,13 +297,12 @@ function constructDockerImageName() {
   return `${baseName}:${formattedBranch}-${impl}`;
 }
 
-const DOCKER_IMAGE = options.dockerImage || process.env.LISPLY_DOCKER_IMAGE || process.env.LISPY_DOCKER_IMAGE || process.env.GENDL_DOCKER_IMAGE || constructDockerImageName();
-const AUTO_START = options.autoStart !== false && (process.env.LISPLY_AUTO_START !== 'false' && process.env.LISPY_AUTO_START !== 'false' && process.env.GENDL_AUTO_START !== 'false');
-const DOCKER_SOCKET = options.dockerSocket || process.env.DOCKER_SOCKET || '/var/run/docker.sock';
+const DOCKER_IMAGE = options.dockerImage || process.env.LISPLY_DOCKER_IMAGE || process.env.DOCKER_IMAGE || constructDockerImageName();
+const AUTO_START = options.autoStart !== false && (process.env.LISPLY_AUTO_START !== 'false' && process.env.AUTO_START !== 'false');
+const DOCKER_SOCKET = options.dockerSocket || process.env.LISPLY_DOCKER_SOCKET || process.env.DOCKER_SOCKET || '/var/run/docker.sock';
 const MOUNTS = options.mount || []; // Mount points from command line
 const ENV_MOUNTS = process.env.LISPLY_MOUNTS ? process.env.LISPLY_MOUNTS.split(',') : 
-                 (process.env.LISPY_MOUNTS ? process.env.LISPY_MOUNTS.split(',') : 
-                 (process.env.GENDL_MOUNTS ? process.env.GENDL_MOUNTS.split(',') : [])); // Mount points from env
+                 (process.env.MOUNTS ? process.env.MOUNTS.split(',') : []); // Mount points from env
 const ALL_MOUNTS = [...MOUNTS, ...ENV_MOUNTS];
 
 // Base path for MCP endpoints
@@ -950,8 +1048,8 @@ async function handleToolCall(request) {
     // Special handling for each tool
     if (toolName === 'http_request') {
       return handleHttpRequest(request, args);
-    } else if (toolName === 'ping_gendl') {
-      return handlePingGendl(request);
+    } else if (toolName === 'ping_lisp') {
+      return handlePingLisp(request);
     } else if (toolName === 'lisp_eval') {
       return handleLispEval(request, args);
     // Removed KB query handler
@@ -1100,8 +1198,8 @@ function makeHttpRequest(options, body, callback, logPrefix = '') {
 }
 
 // Handle simple ping_gendl tool
-function handlePingGendl(request) {
-  logger.info('Handling ping_gendl request');
+function handlePingLisp(request) {
+  logger.info('Handling ping_lisp request');
   
   const options = {
     hostname: BACKEND_HOST,

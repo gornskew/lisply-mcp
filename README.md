@@ -11,7 +11,7 @@ direct AI-assisted symbolic programming.
 [Gendl](https://gitlab.common-lisp.net/gendl/gendl) system,
 automatically starting and stopping a Gendl container if needed. Work
 is underway to generalize the implementation to support a [Gnu Emacs
-Backend](https://github.com/gendl/skewed-emacs.git), and subsequently
+Backend](https://github.com/gornskew/skewed-emacs.git), and subsequently
 we welcome more [compliant](BACKEND-REQS.md) Lispy systems.
 
 ## Table of Contents
