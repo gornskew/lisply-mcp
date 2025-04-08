@@ -1,6 +1,6 @@
 # Model Context Protocol (MCP) Wrapper for Lisply Backends
 
-![Robot with Lambda symbol](scripts/robot-lambda.png)
+<img src="scripts/robot-lambda.png" alt="Robot with Lambda symbol" width="300">
 
 This MCP wrapper script connects MCP-capable AI agents such as Claude
 Desktop to "Lisp-speaking" backends, enabling direct AI-assisted
