@@ -1,55 +1,94 @@
 # Model Context Protocol (MCP) Wrapper for Lisply Backends
 
-This is an MCP wrapper script meant for connecting Claude Desktop and
-similar "agentic AI clients" to Lisp-speaking backend services. It
-provides a powerful interface between Claude and any
-[compliant](BACKEND-REQS.md) Lisp-speaking backend service
-e.g. [Gendl](https://gitlab.common-lisp.net/gendl/gendl), enabling
-direct AI-assisted symbolic programming.
+This MCP wrapper script connects Claude Desktop to Lisp backends, enabling direct AI-assisted symbolic programming with systems like [Gendl](https://gitlab.common-lisp.net/gendl/gendl).
 
-**NOTE:** this implementation currently works with the
-[Gendl](https://gitlab.common-lisp.net/gendl/gendl) system,
-automatically starting and stopping a Gendl container if needed. Work
-is underway to generalize the implementation to support a [Gnu Emacs
-Backend](https://github.com/gornskew/skewed-emacs.git), and subsequently
-we welcome more [compliant](BACKEND-REQS.md) Lisply systems.
+## Quick Start
+
+### 1. Install
+
+```bash
+cd scripts
+npm install
+chmod +x mcp-wrapper.js
+```
+
+### 2. Add to Claude Desktop Configuration
+
+Add this to your `claude_desktop_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "lisply": {
+      "command": "node",
+      "args": [
+        "/path/to/lisply-mcp/scripts/mcp-wrapper.js"
+      ]
+    }
+  }
+}
+```
+
+With volume mounting (useful for project access):
+```json
+{
+  "mcpServers": {
+    "lisply": {
+      "command": "node",
+      "args": [
+        "/path/to/lisply-mcp/scripts/mcp-wrapper.js",
+        "--mount", "/home/user/projects:/projects"
+      ]
+    }
+  }
+}
+```
+
+### 3. Available Tools for Claude
+
+The wrapper exposes these tools to Claude:
+
+- `lisp_eval`: Evaluate Lisp code directly
+- `http_request`: Make HTTP requests to backend endpoints
+- `ping_lisp`: Check if the Lisp backend is available
+
+### 4. Example Lisp Evaluation
+
+Claude can now run Lisp code:
+
+```lisp
+(in-package :gdl-user)
+(defparameter *box* (make-box :width 10 :height 5 :depth 3))
+(theo *box* width) ;; Returns 10
+```
 
 ## Table of Contents
 
 - [Overview](#overview)
 - [Architecture](#architecture)
 - [Features](#features)
-- [Installation](#installation)
-- [Configuration](#configuration)
+- [Detailed Installation](#detailed-installation)
+- [Advanced Configuration](#advanced-configuration)
   - [Command-Line Arguments](#command-line-arguments)
   - [Environment Variables](#environment-variables)
 - [Docker Integration](#docker-integration)
-  - [Docker Image Selection](#docker-image-selection)
-  - [Docker Hub Authentication](#docker-hub-authentication)
-  - [Existing Service Detection](#existing-service-detection)
-  - [Volume Mounting](#volume-mounting)
-- [Usage Examples](#usage-examples)
 - [Communication Modes](#communication-modes)
-  - [HTTP Mode](#http-mode)
-  - [Stdio Mode](#stdio-mode)
-- [Claude Integration](#claude-integration)
-  - [Tools for Claude](#tools-for-claude)
-  - [Claude Desktop Configuration](#claude-desktop-configuration)
+- [Advanced Claude Desktop Configuration](#advanced-claude-desktop-configuration)
 - [Real-World Examples](#real-world-examples)
 - [Troubleshooting](#troubleshooting)
 - [License](#license)
 
 ## Overview
 
-The Lisply MCP wrapper is implemented in Nodejs, and provides a bridge
+The Lisply MCP wrapper is implemented in Nodejs with a modular architecture, and provides a bridge
 between Claude AI and any [compliant Lisply backend
 system](BACKEND-REQS.md). This wrapper enables Claude to:
 
 1. Evaluate Lisp code in the Lisply Environment (LE).
-2. Make HTTP requests any endpoints implemented in the LE.
-3. Access any Introspection and Documentation lookup facilities in the LE.
-4. Create, manipulate, compile, load, analyze files through Lisp evaluation. 
-5. Interact with Lisp debuggers (for locally spawned containers). 
+2. Make HTTP requests to any endpoints implemented in the LE.
+3. Access introspection and documentation lookup facilities in the LE.
+4. Create, manipulate, compile, load, and analyze files through Lisp evaluation.
+5. Interact with Lisp debuggers (for locally spawned containers).
 
 ## Architecture
 
@@ -104,6 +143,24 @@ The wrapper script handles:
    API](BACKEND-REQS.md)
 4. Error handling and logging
 
+### Modular Code Structure
+
+The wrapper is organized into a modular structure for maintainability:
+
+- **lib/config.js**: Configuration loading and environment handling
+- **lib/logger.js**: Logging functionality 
+- **lib/docker.js**: Docker container management
+- **lib/server.js**: HTTP server and MCP wrapper implementation
+- **lib/utils.js**: Utility functions for response handling
+- **handlers/**: Tool-specific request handlers
+  - **initialize.js**: Initialization handler
+  - **toolsList.js**: Tools list handler
+  - **toolCall.js**: Main tool call dispatcher
+  - **httpRequest.js**: HTTP request handler
+  - **ping.js**: Ping handler
+  - **lispEval.js**: Lisp evaluation handler
+- **mcp-wrapper.js**: Main entry point
+
 
 ## Features
 
@@ -117,27 +174,32 @@ The wrapper script handles:
 - **DockerHub Authentication**: Auto-pulls latest container images with authentication handling
 - **Existing Service Detection**: Relies on existing live services when available, avoiding the need to start & stop a dedicated container
 - **Multiple Communication Modes**: Support for both HTTP and stdio communication with interactive debugging capabilities
+- **Modular Code Structure**: Well-organized code with clear separation of concerns for maintainability
 
-## Installation
+## Detailed Installation
 
-1. Install the required dependencies:
+1. Clone this repository:
 ```bash
-cd /path/to/lisply-mcp/scripts
+git clone https://github.com/your-org/lisply-mcp.git
+```
+
+2. Install the required dependencies:
+```bash
+cd lisply-mcp/scripts
 npm install
 chmod +x mcp-wrapper.js
 ```
 
-2. Ensure Docker is installed on your system.
+3. Ensure Docker is installed on your system.
 
-3. Test the script:
+4. Test the script:
 ```bash
 node mcp-wrapper.js --help
 ```
 
-## Configuration
+## Advanced Configuration
 
-You can configure the MCP wrapper using either command-line arguments
-or environment variables.
+The MCP wrapper is highly configurable through command-line arguments or environment variables.
 
 ### Command-Line Arguments
 
@@ -404,80 +466,9 @@ If running the wrapper inside a container, make sure to mount the Docker socket:
 docker run -v /var/run/docker.sock:/var/run/docker.sock -v /path/to/scripts:/app node:18 node /app/mcp-wrapper.js
 ```
 
-## Claude Integration
+## Advanced Claude Desktop Configuration
 
-This wrapper enables Claude to interact with Lisply through the Model Context Protocol (MCP).
-
-### Tools for Claude
-
-The MCP wrapper exposes several tools that Claude can use to interact with Lisply:
-
-#### Lisp Evaluation Tool
-
-The `lisp_eval` tool allows Claude to evaluate Lisp code directly within the Lisply environment. This enables Claude to:
-
-- Create and manipulate Lisp objects
-- Perform complex calculations using Lisp primitives
-- Access and modify the Lisp environment state
-
-The tool accepts the following parameters:
-
-- `code` (required): The Lisp code to evaluate
-- `package` (optional): The package to use for the evaluation
-- `mode` (optional): The mode to use to talk to Lisply
-  - `http` (default): Uses HTTP communication for structured responses
-  - `stdio`: Uses standard input/output communication for a raw REPL experience
-
-**Mode Comparison:**
-
-| Feature | HTTP Mode | STDIO Mode |
-|---------|-----------|------------|
-| Response Format | Structured with separate Result and Stdout fields | Raw REPL-like output |
-| Error Handling | Traps errors and returns them as strings | Can enter interactive debugger |
-| Debugger Support | No interactive debugging | Supports interactive debugger |
-| Compatibility | Works with local & remote servers | Only for local containers started by MCP |
-| Use Case | Clean integration, simple queries | Development, debugging, complex interactions |
-
-Example usage with default HTTP mode:
-```lisp
-(in-package :gdl-user)
-(defparameter *test-box* (make-box :width 10 :height 5 :depth 3))
-(theo *test-box* width)
-```
-
-Example usage with STDIO mode (for debugging):
-```lisp
-;; This will allow interactive debugging if errors occur
-(in-package :gdl-user)
-(defparameter *test-box* (make-box :width 10 :height 5 :depth 3))
-(theo *test-box* width)
-```
-
-#### HTTP Request Tool
-
-The `http_request` tool enables Claude to interact with any HTTP endpoint exposed by Lisply:
-
-```json
-{
-  "path": "/color-map",
-  "method": "GET",
-  "headers": {
-    "Accept": "application/json"
-  }
-}
-```
-
-#### Ping Tool
-
-The `ping_lisp` tool lets Claude check if the Lisply server is available:
-
-```
-ping_lisp()
-```
-
-### Claude Desktop Configuration
-
-Here's an example of how to configure Claude Desktop to use this wrapper:
+Here's a more advanced example of how to configure Claude Desktop to use this wrapper:
 
 ```json
 {
@@ -502,7 +493,9 @@ Here's an example of how to configure Claude Desktop to use this wrapper:
       "args": [
         "node",
         "/home/user/projects/lisply-mcp/scripts/mcp-wrapper.js",
-        "--mount", "/home/user/projects:/projects"
+        "--mount", "/home/user/projects:/projects",
+        "--debug",
+        "--start-https"
       ],
       "env": {
         "NODE_ENV": "production",
@@ -512,6 +505,58 @@ Here's an example of how to configure Claude Desktop to use this wrapper:
   },
   "globalShortcut": ""
 }
+```
+
+### Tool Details for Claude
+
+#### Lisp Evaluation Tool (`lisp_eval`)
+
+The `lisp_eval` tool allows Claude to evaluate Lisp code directly within the Lisply environment with these parameters:
+
+- `code` (required): The Lisp code to evaluate
+- `package` (optional): The package to use for the evaluation
+- `mode` (optional): The mode to use to talk to Lisply
+  - `http` (default): Uses HTTP communication for structured responses
+  - `stdio`: Uses standard input/output communication for a raw REPL experience
+
+**Mode Comparison:**
+
+| Feature | HTTP Mode | STDIO Mode |
+|---------|-----------|------------|
+| Response Format | Structured with separate Result and Stdout fields | Raw REPL-like output |
+| Error Handling | Traps errors and returns them as strings | Can enter interactive debugger |
+| Debugger Support | No interactive debugging | Supports interactive debugger |
+| Compatibility | Works with local & remote servers | Only for local containers started by MCP |
+| Use Case | Clean integration, simple queries | Development, debugging, complex interactions |
+
+Example usage with STDIO mode (for debugging):
+```lisp
+;; This will allow interactive debugging if errors occur
+(in-package :gdl-user)
+(defparameter *test-box* (make-box :width 10 :height 5 :depth 3))
+(theo *test-box* width)
+```
+
+#### HTTP Request Tool (`http_request`)
+
+The `http_request` tool enables Claude to interact with any HTTP endpoint exposed by Lisply:
+
+```json
+{
+  "path": "/color-map",
+  "method": "GET",
+  "headers": {
+    "Accept": "application/json"
+  }
+}
+```
+
+#### Ping Tool (`ping_lisp`)
+
+The `ping_lisp` tool lets Claude check if the Lisply server is available:
+
+```
+ping_lisp()
 ```
 
 ## Real-World Examples
