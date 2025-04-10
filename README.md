@@ -16,8 +16,8 @@ Lisp.
 
 ```bash
 cd scripts
-npm install
-chmod +x mcp-wrapper.js
+npm install # optional - the script will attempt to do this if necessary
+chmod +x mcp-wrapper.js - optional - should not strictly be necessary. 
 ```
  
 ### 2. Add to AI Agent's Desktop Configuration (e.g. claude\_desktop\_config.json)
@@ -196,8 +196,8 @@ git clone https://github.com/your-org/lisply-mcp.git
 2. Install the required dependencies:
 ```bash
 cd lisply-mcp/scripts
-npm install
-chmod +x mcp-wrapper.js
+npm install # optional - the script will attempt to do this if necessary
+chmod +x mcp-wrapper.js # probably optional
 ```
 
 3. Ensure Docker is installed on your system.
