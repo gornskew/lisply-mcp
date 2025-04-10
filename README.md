@@ -56,11 +56,39 @@ With volume mounting (useful for project access):
 
 The wrapper exposes these MCP tools:
 
-- `lisp_eval`: Evaluate Lisp code directly
-- `http_request`: Make HTTP requests to backend endpoints
+- `lisp_eval`: Evaluate Lisp code directly in the Lisply backend
+- `http_request`: Make HTTP requests to backend endpoints (implemented in the middleware only)
 - `ping_lisp`: Check if the Lisp backend is available
 
+**Important Note about Tools**:
+- `lisp_eval` and `ping_lisp` are implemented directly by the backend Lisply server
+- `http_request` is implemented only in this middleware and not in the backend - it allows Claude to make HTTP requests to any endpoint on the Lisply backend server
+- The `mode` parameter for `lisp_eval` (http/stdio) is also handled by the middleware and not by the backend
+
 ### 4. Example Lisp Evaluation
+
+
+**Syntax Note for the below examples:**
+
+`the` is a referencing macro used to access messages in the
+current object (implicit `self`).
+
+`theo` is a synonym for `the-object` and is used to access messages in
+an object that you give as an expression, e.g. a variable, as the
+first argument to `theo` e.g.: `(theo my-instance total-mass)`
+
+`(the ...)` expands exactly to `(the-object self ...)` == `(theo self ...)`
+
+
+```
+(the message-name)            ; message to implicit self, message has no args.
+(the (message-name arg1 arg2)) ; implicit self message with args
+(theo object message-name)     ; explicit object, message without args.
+(theo object (message-name arg1 arg2)) ; explicit object, message with args. 
+
+```
+
+
 
 The AI Agent can now run Lisp code (Common Lisp with Gendl extensions, in this example):
 
@@ -377,12 +405,12 @@ LISPLY_MOUNTS=/home/user/projects:/projects,/home/user/data:/data node mcp-wrapp
 ## Communication Modes
 
 The Lisply MCP wrapper supports two primary modes of communication
-with the Lisply backend: HTTP mode and stdio mode.
+with the Lisply backend: HTTP mode and stdio mode. These modes are handled entirely by the middleware layer, not by the backend.
 
 ### HTTP Mode
 
 HTTP mode is the default communication method and works with both
-local and remote Lisply backends.
+local and remote Lisply backends. This mode uses the standard HTTP endpoints that all Lisply backends are required to implement.
 
 **Characteristics:**
 - Structured responses with separate result and stdout fields
@@ -398,7 +426,7 @@ Result: 6, Stdout: This is a message to standard output
 
 ### Stdio Mode
 
-Stdio mode provides a direct REPL experience for local containers and supports interactive debugging capabilities.
+Stdio mode provides a direct REPL experience for local containers and supports interactive debugging capabilities. This mode is completely managed by the middleware and leverages the backend's native REPL interface.
 
 **Characteristics:**
 - Raw REPL-like output without structured formatting
@@ -406,6 +434,7 @@ Stdio mode provides a direct REPL experience for local containers and supports i
 - Only available for local containers started by the MCP wrapper
 - Ideal for development, debugging, and complex interactions
 - Preserves exactly what the REPL outputs
+- Completely implemented in the middleware - backends don't need special implementation
 
 **Example response in stdio mode:**
 ```
@@ -415,13 +444,14 @@ This is a message to standard output
 
 **Debugger Support:** When an error occurs in stdio mode, the Lisp
 debugger can be interacted with. The wrapper detects debugger prompts
-and provides metadata about the debugger state to the AI Agent.
+and provides metadata about the debugger state to the AI Agent. This functionality relies on the native debugger capabilities of the Lisp implementation, not on any special backend implementation.
 
 **Mode Selection:**
 - Default mode is HTTP
 - To use stdio mode, specify `mode: "stdio"` in the `lisp_eval` tool parameters
 - Stdio capability can be disabled with the `--no-use-stdio` flag or `LISPLY_USE_STDIO=false`
 - If stdio mode is requested but not available, the wrapper will fall back to HTTP mode
+- The backend has no knowledge of which mode is being used - this is entirely managed by the middleware
 
 ## Usage Examples 
 
