@@ -57,7 +57,7 @@ The backend must expose a list of its capabilities through the `/lisply/tools/li
     {
       "name": "lisp_eval",
       "description": "Evaluates Lisp code directly within the Lisply environment",
-      "parameters": {
+      "inputSchema": {
         "type": "object",
         "properties": {
           "code": {
@@ -79,7 +79,7 @@ The backend must expose a list of its capabilities through the `/lisply/tools/li
     {
       "name": "http_request",
       "description": "Makes HTTP requests to endpoints implemented in the Lisply environment",
-      "parameters": {
+      "inputSchema": {
         "type": "object",
         "properties": {
           "path": {
@@ -105,7 +105,7 @@ The backend must expose a list of its capabilities through the `/lisply/tools/li
     {
       "name": "ping_lisp",
       "description": "Checks if the Lisply backend is available",
-      "parameters": {
+      "inputSchema": {
         "type": "object",
         "properties": {}
       }
@@ -141,6 +141,10 @@ Support for multiple evaluation modes:
 
 - **HTTP Mode**: Structured communication with separate result and stdout fields
 - **Stdio Mode**: Direct REPL-like experience with raw output formatting and debugger support
+
+Note: the mode parameter is handled by the `./scripts/mcp-wrapper.js`
+in this layer and affects how it communicates with the backend; the
+backends themselves are not aware of this mode parameter.
 
 ### 4. HTTPS Support
 

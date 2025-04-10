@@ -19,7 +19,7 @@ GDL (Generative Declarative Language) is the core declarative modeling language 
 ### Defining a Simple Circle
 
 ```lisp
-(gendl:define-object circle (base-object)
+(define-object my-circle (base-object)
   :input-slots (radius)
   :computed-slots
   ((area (* pi (expt (the radius) 2)))
@@ -31,9 +31,9 @@ Result: `#<GDL-CLASS CIRCLE>`
 ### Creating and Using a Circle Instance
 
 ```lisp
-(let ((my-circle (make-self 'circle :radius 5)))
-  (list :area (the-object my-circle area)
-        :circumference (the-object my-circle circumference)))
+(let ((my-circle (make-object 'circle :radius 5)))
+  (list :area (theo my-circle area)
+        :circumference (theo my-circle circumference)))
 ```
 
 Result: `(:AREA 78.53981633974483 :CIRCUMFERENCE 31.41592653589793)`
@@ -41,7 +41,7 @@ Result: `(:AREA 78.53981633974483 :CIRCUMFERENCE 31.41592653589793)`
 ### Defining a Box with Volume and Surface Area
 
 ```lisp
-(gendl:define-object box (base-object)
+(define-object box (base-object)
   :input-slots
   (length width height)
   :computed-slots
@@ -56,9 +56,9 @@ Result: `#<GDL-CLASS BOX>`
 ### Computing Box Properties
 
 ```lisp
-(let ((box (make-self 'box :length 5 :width 3 :height 2)))
-  (list :volume (the-object box volume)
-        :surface-area (the-object box surface-area)))
+(let ((box (make-object 'box :length 5 :width 3 :height 2)))
+  (list :volume (theo box volume)
+        :surface-area (theo box surface-area)))
 ```
 
 Result: `(:VOLUME 30 :SURFACE-AREA 62)`
