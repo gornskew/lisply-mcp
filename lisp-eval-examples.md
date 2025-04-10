@@ -1,6 +1,10 @@
 # Lisp Evaluation Examples with Gendl
 
-The Gendl MCP wrapper provides a `lisp_eval` tool that allows you to evaluate Lisp code directly within the Gendl environment. This document provides examples of how to use this feature.
+The Lisply MCP wrapper provides a `lisp_eval` tool that allows you to
+evaluate Lisp code directly within the backend "Lisply-compliant"
+environment. The default environment configured with lisply-mcp is
+Gendl. This document provides examples of how to use this default
+Gendl backend.
 
 ## Basic Lisp Evaluation
 
@@ -12,9 +16,32 @@ You can evaluate simple Lisp expressions:
 
 Result: `6`
 
-## Working with GDL Objects
+## Working with Gendl Objects
 
-GDL (Generative Declarative Language) is the core declarative modeling language in Gendl. Here are examples of defining and using GDL objects:
+GDL (GENeral-purpose Declarative Language) is the core declarative
+modeling language in Gendl. Here are examples of defining and using
+GDL objects:
+
+**Note for the below examples:**
+
+`the` is a referencing macro used to access messages in the
+current object (implicit `self`).
+
+`theo` is a synonym for `the-object` and is used to access messages in
+an object that you give as an expression, e.g. a variable, as the
+first argument to `theo` e.g.: `(theo my-instance total-mass)`
+
+`(the ...)` expands exactly to `(the-object self ...)`
+
+
+```
+(the message-name)            ; message to implicit self, message has no args.
+(the (message-name arg1 arg2)) ; implicit self message with args
+(theo object message-name)     ; explicit object, message without args.
+(theo object (message-name arg1 arg2)) ; explicit object, message with args. 
+
+```
+
 
 ### Defining a Simple Circle
 
