@@ -158,7 +158,7 @@ For legacy access methods:
 
 ## Containerization Support
 
-For standardized deployment, backends should provide:
+For standardized deployment, backends should support:
 
 1. **Docker Container**: A Docker image containing the Lisply backend
 2. **Service Configuration**: Environment variables to configure service startup:
@@ -174,6 +174,7 @@ For standardized deployment, backends should provide:
 Currently, there are implementations or planned implementations for:
 
 1. **Gendl**: A full implementation available at [Gendl on GitLab](https://gitlab.common-lisp.net/gendl/gendl)
+        with Lisply implementation [here] (https://gitlab.common-lisp.net/gendl/gendl/gwl/lisply-backend)
 2. **GNU Emacs Backend**: In development at [Skewed Emacs on GitHub](https://github.com/gornskew/skewed-emacs.git)
 
 ## Extension Protocol
