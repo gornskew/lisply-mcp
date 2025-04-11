@@ -65,6 +65,48 @@ function handleToolsList(request, config, logger) {
           }
         }
       }
+      
+      // Add http_request tool if it doesn't exist
+      const hasHttpRequestTool = toolsData.tools.some(tool => tool.name === 'http_request');
+      
+      if (!hasHttpRequestTool) {
+        logger.debug('Adding http_request tool to tools list');
+        
+        toolsData.tools.push({
+          "name": "http_request",
+          "description": "Send an HTTP request to the specified path",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "path": {
+                "type": "string",
+                "description": "The path to send the request to"
+              },
+              "method": {
+                "type": "string",
+                "description": "The HTTP method to use (GET, POST, PUT, DELETE, etc.)"
+              },
+              "body": {
+                "type": "string",
+                "description": "The request body content (for POST/PUT requests)"
+              },
+              "content": {
+                "type": "string",
+                "description": "Alternative name for the request body content (for compatibility)"
+              },
+              "headers": {
+                "type": "object",
+                "description": "Optional headers to include with the request"
+              },
+              "rawResponse": {
+                "type": "boolean",
+                "description": "If true, return the full response object instead of just the content"
+              }
+            },
+            "required": ["path"]
+          }
+        });
+      }
 
       sendStandardResponse(request, toolsData, logger);
     } catch (parseError) {

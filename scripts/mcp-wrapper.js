@@ -150,7 +150,7 @@ try {
   // Log configuration
   logger.info(`Starting MCP wrapper with backend host: ${config.BACKEND_HOST}, SWANK port: ${config.SWANK_HOST_PORT}, HTTP port: ${config.HTTP_HOST_PORT}`);
   logger.info(`Auto-start is ${config.AUTO_START ? 'enabled' : 'disabled'}, Docker image: ${config.options.dockerImage || 'auto-detected'}`);
-  logger.info(`Stdio capability for local containers: ${config.USE_STDIO ? 'enabled' : 'disabled'} (default: enabled), HTTP is default mode, Prompt: '${config.REPL_PROMPT}', Timeout: ${config.EVAL_TIMEOUT}ms`);
+  logger.info(`Stdio capability for local containers: ${config.NO_USE_STDIO ? 'disabled' : 'enabled'} (default: enabled), HTTP is default mode, Prompt: '${config.REPL_PROMPT}', Timeout: ${config.EVAL_TIMEOUT}ms`);
   logger.info(`Endpoint prefix: ${config.ENDPOINT_PREFIX}, Endpoints - Eval: ${config.EVAL_ENDPOINT}, HTTP: ${config.HTTP_REQUEST_ENDPOINT}, Ping: ${config.PING_ENDPOINT}`);
   if (config.ALL_MOUNTS.length > 0) {
     logger.info(`Configured mounts: ${config.ALL_MOUNTS.join(', ')}`);

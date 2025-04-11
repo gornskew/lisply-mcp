@@ -35,18 +35,21 @@ async function handleHttpRequest(request, args, config, logger) {
       }
     };
     
+    // Support both 'body' and 'content' parameters (content takes precedence if both are provided)
+    const requestBody = args.content !== undefined ? args.content : args.body;
+    
     // Add custom headers if provided
     if (args.headers && typeof args.headers === 'object') {
       options.headers = { ...options.headers, ...args.headers };
     }
     
     // If Content-Type is not specified for POST/PUT and we have a body, default to application/json
-    if (['POST', 'PUT'].includes(options.method) && args.body && 
+    if (['POST', 'PUT'].includes(options.method) && requestBody && 
         !options.headers['Content-Type'] && !options.headers['content-type']) {
       options.headers['Content-Type'] = 'application/json';
     }
     
-    makeHttpRequest(options, args.body, (error, response) => {
+    makeHttpRequest(options, requestBody, (error, response) => {
       if (error) {
         logger.error(`HTTP request error: ${error.message}`);
         sendErrorResponse(request, -32603, `Error making HTTP request: ${error.message}`, logger);

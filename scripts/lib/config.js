@@ -330,7 +330,7 @@ function loadConfig(program) {
   
   // Lisp REPL communication configuration
   // Enable stdio capability by default (but http is still the default communication mode)
-  const USE_STDIO = options.useStdio !== false && parseBool(getEnvVar('USE_STDIO', 'true'), true);
+    const NO_USE_STDIO = options.noUseStdio !== false || parseBool(getEnvVar('NO_USE_STDIO', 'true'), true);
   
   // Default REPL prompts by implementation
   const DEFAULT_PROMPTS = {
@@ -398,7 +398,7 @@ function loadConfig(program) {
     START_HTTPS,
     START_SWANK,
     START_TELNET,
-    USE_STDIO,
+    NO_USE_STDIO,
     DEFAULT_PROMPTS,
     DEBUGGER_PROMPTS,
     REPL_PROMPT,

@@ -34,10 +34,10 @@ function handleLispEval(request, args, config, logger) {
     const isLocalHost = (config.BACKEND_HOST === '127.0.0.1' || config.BACKEND_HOST === 'localhost');
     
     // First check if we already have a direct stdio connection
-    let canUseStdio = isLocalHost && global.dockerProcess && config.USE_STDIO;
+    let canUseStdio = isLocalHost && global.dockerProcess && ! config.NO_USE_STDIO;
     
     // If we don't have a direct connection but stdio is enabled, try to find and attach to the container
-    if (isLocalHost && !global.dockerProcess && config.USE_STDIO && requestedMode === 'stdio') {
+    if (isLocalHost && !global.dockerProcess && !config.NO_USE_STDIO && requestedMode === 'stdio') {
       canUseStdio = tryAttachToContainer(config, logger);
     }
     
