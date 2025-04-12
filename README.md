@@ -1,5 +1,7 @@
 # Model Context Protocol (MCP) Wrapper for Lisply Backends
 
+As in: Let us Lisply provide MCP services.
+
 <img src="scripts/robot-lambda.png" alt="Robot with Lambda symbol" width="300">
 
 This project is a [Model Context Protocol
