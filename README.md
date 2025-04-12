@@ -1,4 +1,4 @@
-# Model Context Protocol (MCP) Wrapper for Lisply Backends
+# Model Context Protocol (MCP) Wrapper for Lisp or Lisp-like Backends
 
 <img src="scripts/robot-lambda.png" alt="Robot with Lambda symbol" width="300">
 
