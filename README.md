@@ -10,7 +10,7 @@ interact with [Lisp-based development
 environments](https://common-lisp.net/) using the lightweight Lisply
 protocol.
 
-## For Whom Is This Project? 
+## Who is this Project For? 
 
  - AI practitioners curious about Lisp
  - Lisp practitioners curious about AI
@@ -31,7 +31,7 @@ for compatibility with this Lisply-MCP adapter.
 
 If you configure this adapter without specifying a backend container
 image name (or host/port for a remote Lisply service), then by
-default, it pulls and runs a
+default it pulls and runs a
 [Gendl](https://gitlab.common-lisp.net/gendl/gendl) container, which
 speaks a Common Lisp superset. Work is also in progress on a second
 reference Lisply backend implementation at the [Skewed
