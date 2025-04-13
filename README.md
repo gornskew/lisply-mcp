@@ -31,7 +31,7 @@ If you configure this adapter without specifying a backend container,
 image name (or host/port for a remote Lisply service), then by
 default it pulls and runs a
 [Gendl](https://gitlab.common-lisp.net/gendl/gendl) container, which
-speaks a Common Lisp superset. Work is also in progress on a second
+speaks a Common Lisp superset. Work is in progress on a second
 reference Lisply backend implementation at the [Skewed
 Emacs](https://github.com/gornskew/skewed-emacs) project, which aims
 to launch an Emacs Lisp-speaking backend container image.
