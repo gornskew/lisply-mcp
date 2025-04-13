@@ -1,6 +1,4 @@
-# Model Context Protocol (MCP) Wrapper for Lisply Backends
-
-As in: Let us Lisply provide MCP services.
+# Model Context Protocol (MCP) Wrapper for Lisp and Lisp-like Backends
 
 <img src="scripts/robot-lambda.png" alt="Robot with Lambda symbol" width="300">
 
@@ -12,7 +10,7 @@ interact with [Lisp-based development
 environments](https://common-lisp.net/) using the lightweight Lisply
 protocol.
 
-## For Whom Is This Project? 
+## Who Is This For?
 
  - AI practitioners curious about Lisp
  - Lisp practitioners curious about AI
