@@ -7,7 +7,7 @@ This project is a [Model Context Protocol
 [Large Language Models
 (LLMs)](https://en.wikipedia.org/wiki/Large_language_model) to
 interact with [Lisp-based development
-environments](https://common-lisp.net/) using the lightweight Lisply
+environments](https://common-lisp.net/) using the lightweight _Lisply_
 protocol.
 
 ## Who Is This For?
