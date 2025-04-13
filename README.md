@@ -315,7 +315,7 @@ evaluated against a running Lisply backend, best practices are:
 
 - Take steps to [limit RAM and CPU
   usage](https://docs.docker.com/engine/containers/resource_constraints/)
-  of the container (in a future release, this project aims to support
+  of the container. (In a future release, this project aims to support
   these options as pass-through to the automated container
   startup). Typical options for reference: use `--memory=512m,
   --cpus=1, --cap-drop, --read-only`.  Avoid using `--network
