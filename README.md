@@ -10,7 +10,7 @@ interact with [Lisp-based development
 environments](https://common-lisp.net/) using the lightweight Lisply
 protocol.
 
-## Who is this Project Aimed-At?
+## Who is this Project Aimed At?
  - AI practitioners curious about Lisp
  - Lisp practitioners curious about AI
  - CAD designers and automators
@@ -19,7 +19,7 @@ protocol.
  - Engineers in any field
  - Tinkerers, meddlers, and tamperers from all walks of life
 
-This adapter (also known as a "wrapper" or "MCP wrapper") connects
+This adapter (also known as a "wrapper," or "MCP wrapper") connects
 [MCP-capable](https://modelcontextprotocol.org) AI Agents, referred to
 here as MCP Clients, such as [Claude
 Desktop](https://www.anthropic.com/claude), to Lisp-speaking backend
