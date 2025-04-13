@@ -10,8 +10,7 @@ interact with [Lisp-based development
 environments](https://common-lisp.net/) using the lightweight Lisply
 protocol.
 
-## Who is this Project For? 
-
+## Who is this Project Aimed-At?
  - AI practitioners curious about Lisp
  - Lisp practitioners curious about AI
  - CAD designers and automators
