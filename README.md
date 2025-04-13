@@ -249,8 +249,8 @@ agents controlling Lisp systems.
 
 This MCP wrapper implements the Model Context Protocol (MCP) to
 connect Claude or any other MCP-capable AI Agent (also known in this
-context as an "MCP Client") with Lisply backend services. The below
-diagram attempts to capture how the components interact:
+context as an "MCP Client") with Lisply backend services. The 
+diagram below attempts to capture how the components interact:
 
 
 ```mermaid
