@@ -25,9 +25,9 @@ here as MCP Clients, such as [ClaudeDesktop](https://www.anthropic.com/claude),
 to Lisp-speaking backend servers, to facilitate direct AI-assisted
 symbolic programming. *For this project we have coined the term
 "Lisply" to refer to a lightweightprotocol which any Lisp or
-Lisp-like system can implementfor compatibility with this Lisply-MCP adapter.
+Lisp-like system can implement for compatibility with this Lisply-MCP adapter.
 
-If you configure this adapter without specifying a backend container
+If you configure this adapter without specifying a backend container,
 image name (or host/port for a remote Lisply service), then by
 default it pulls and runs a
 [Gendl](https://gitlab.common-lisp.net/gendl/gendl) container, which
@@ -48,12 +48,12 @@ to launch an Emacs Lisp-speaking backend container image.
    [installed](https://docs.docker.com/engine/install/) on the same
    host as where the Node.js is running this MCP wrapper script, e.g.,
    if the script is running through WSL, then Docker must also be
-   installed in the WSL environment, and likewise if the Node script
+   installed in the WSL environment, and, likewise, if the Node script
    is running natively on Windows. Note that Docker Desktop is not
    needed in a WSL configuration; non-GUI Docker can be installed with
    standard Linux package managers.
 
-3. Clone this repo with git to a location of your choice (a directory
+3. Clone this repo with git to a location of your choice (i.e., a directory
    that Claude Desktop can access).
    
  
