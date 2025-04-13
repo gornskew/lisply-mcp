@@ -21,12 +21,11 @@ protocol.
 
 This adapter (also known as a "wrapper," or "MCP wrapper") connects
 [MCP-capable](https://modelcontextprotocol.org) AI Agents, referred to
-here as MCP Clients, such as [Claude
-Desktop](https://www.anthropic.com/claude), to Lisp-speaking backend
-servers, to facilitate direct AI-assisted symbolic programming. For
-this project, we have coined the term _Lisply_ to refer to a
-lightweight protocol which any Lisp or Lisp-like system can implement
-for compatibility with this Lisply-MCP adapter.
+here as MCP Clients, such as [ClaudeDesktop](https://www.anthropic.com/claude),
+to Lisp-speaking backend servers, to facilitate direct AI-assisted
+symbolic programming. *For this project we have coined the term
+"Lisply" to refer to a lightweightprotocol which any Lisp or
+Lisp-like system can implementfor compatibility with this Lisply-MCP adapter.
 
 If you configure this adapter without specifying a backend container
 image name (or host/port for a remote Lisply service), then by
