@@ -143,7 +143,7 @@ The wrapper exposes these MCP tools:
 
  - `http_request` is implemented explicitly in this middleware and
    implicitly in the backend - it allows Claude to make HTTP requests
-   to any endpoint on the Lisply backend server, where it's assumed
+   to any endpoint on the Lisply backend server, where it is assumed
    that the Lisply backend may support certain custom-defined
    endpoints at the same http service port as configured in this
    wrapper.
