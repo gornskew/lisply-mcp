@@ -242,7 +242,7 @@ enables the AI Agent to:
 [Lisply](./BACKEND-REQS.md) is a lightweight protocol that specifies a
 minimal yet flexible set of HTTP and standard input/output interfaces,
 a standard set of environment variables, a Docker container image
-naming convention, and several optional capabilities, to facilitate AI
+naming convention, and several optional capabilities to facilitate AI
 agents controlling Lisp systems.
 
 ## Architecture
