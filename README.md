@@ -1,4 +1,5 @@
-# Model Context Protocol (MCP) Wrapper for Lisp and Lisp-like Backends
+
+# Model Context Protocol (MCP) Wrapper for Lisp or Lisp-like Backends
 
 <img src="scripts/robot-lambda.png" alt="Robot with Lambda symbol" width="300">
 
@@ -10,6 +11,7 @@ interact with [Lisp-based development
 environments](https://common-lisp.net/) using the lightweight _Lisply_
 protocol.
 
+
 ## Who Is This For?
 
  - AI practitioners curious about Lisp
@@ -20,20 +22,19 @@ protocol.
  - Engineers in any field
  - Tinkerers, meddlers, and tamperers from all walks of life
 
-This adapter (also known as a "wrapper" or "MCP wrapper") connects
+This adapter (also known as a "wrapper," or "MCP wrapper") connects
 [MCP-capable](https://modelcontextprotocol.org) AI Agents, referred to
-here as MCP Clients, such as [Claude
-Desktop](https://www.anthropic.com/claude), to Lisp-speaking backend
-servers, to facilitate direct AI-assisted symbolic programming. For
-this project, we have coined the term _Lisply_ to refer to a
-lightweight protocol which any Lisp or Lisp-like system can implement
-for compatibility with this Lisply-MCP adapter.
+here as MCP Clients, such as [ClaudeDesktop](https://www.anthropic.com/claude),
+to Lisp-speaking backend servers, to facilitate direct AI-assisted
+symbolic programming. *For this project we have coined the term
+"Lisply" to refer to a lightweight protocol which any Lisp or
+Lisp-like environment [or "SYSTEM?"] can implement for compatibility with this Lisply-MCP adapter.
 
-If you configure this adapter without specifying a backend container
+If you configure this adapter without specifying a backend container,
 image name (or host/port for a remote Lisply service), then by
-default, it pulls and runs a
+default it pulls and runs a
 [Gendl](https://gitlab.common-lisp.net/gendl/gendl) container, which
-speaks a Common Lisp superset. Work is also in progress on a second
+speaks a Common Lisp superset. Work is in progress on a second
 reference Lisply backend implementation at the [Skewed
 Emacs](https://github.com/gornskew/skewed-emacs) project, which aims
 to launch an Emacs Lisp-speaking backend container image.
@@ -50,12 +51,12 @@ to launch an Emacs Lisp-speaking backend container image.
    [installed](https://docs.docker.com/engine/install/) on the same
    host as where the Node.js is running this MCP wrapper script, e.g.,
    if the script is running through WSL, then Docker must also be
-   installed in the WSL environment, and likewise if the Node script
+   installed in the WSL environment, and, likewise, if the Node script
    is running natively on Windows. Note that Docker Desktop is not
    needed in a WSL configuration; non-GUI Docker can be installed with
    standard Linux package managers.
 
-3. Clone this repo with git to a location of your choice (a directory
+3. Clone this repo with git to a location of your choice (i.e., a directory
    that Claude Desktop can access).
    
  
@@ -145,7 +146,7 @@ The wrapper exposes these MCP tools:
 
  - `http_request` is implemented explicitly in this middleware and
    implicitly in the backend - it allows Claude to make HTTP requests
-   to any endpoint on the Lisply backend server, where it's assumed
+   to any endpoint on the Lisply backend server, where it is assumed
    that the Lisply backend may support certain custom-defined
    endpoints at the same http service port as configured in this
    wrapper.
@@ -244,15 +245,15 @@ enables the AI Agent to:
 [Lisply](./BACKEND-REQS.md) is a lightweight protocol that specifies a
 minimal yet flexible set of HTTP and standard input/output interfaces,
 a standard set of environment variables, a Docker container image
-naming convention, and several optional capabilities, to facilitate AI
+naming convention, and several optional capabilities to facilitate AI
 agents controlling Lisp systems.
 
 ## Architecture
 
 This MCP wrapper implements the Model Context Protocol (MCP) to
 connect Claude or any other MCP-capable AI Agent (also known in this
-context as an "MCP Client") with Lisply backend services. The below
-diagram attempts to capture how the components interact:
+context as an "MCP Client") with Lisply backend services. The 
+diagram below attempts to capture how the components interact:
 
 
 ```mermaid
@@ -317,7 +318,7 @@ evaluated against a running Lisply backend, best practices are:
 
 - Take steps to [limit RAM and CPU
   usage](https://docs.docker.com/engine/containers/resource_constraints/)
-  of the container (in a future release, this project aims to support
+  of the container. (In a future release, this project aims to support
   these options as pass-through to the automated container
   startup). Typical options for reference: use `--memory=512m,
   --cpus=1, --cap-drop, --read-only`.  Avoid using `--network
