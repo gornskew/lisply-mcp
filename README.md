@@ -7,9 +7,8 @@ This project is a [Model Context Protocol
 (MCP)](https://modelcontextprotocol.org) software adapter that enables
 [Large Language Models
 (LLMs)](https://en.wikipedia.org/wiki/Large_language_model) to
-interact with [Lisp-based development
-environments](https://common-lisp.net/) using the lightweight _Lisply_
-protocol.
+interact with [Lisp-based](https://common-lisp.net/) development and
+runtime environments using the lightweight _Lisply_ protocol.
 
 
 ## Who Is This For?
@@ -22,22 +21,25 @@ protocol.
  - Engineers in any field
  - Tinkerers, meddlers, and tamperers from all walks of life
 
-This adapter (also known as a "wrapper," or "MCP wrapper") connects
-[MCP-capable](https://modelcontextprotocol.org) AI Agents, referred to
-here as MCP Clients, such as [ClaudeDesktop](https://www.anthropic.com/claude),
-to Lisp-speaking backend servers, to facilitate direct AI-assisted
-symbolic programming. *For this project we have coined the term
-"Lisply" to refer to a lightweight protocol which any Lisp or
-Lisp-like environment [or "SYSTEM?"] can implement for compatibility with this Lisply-MCP adapter.
+This adapter, also known as a "wrapper," or "MCP wrapper," connects
+[MCP-capable](https://modelcontextprotocol.org) AI Agent programs, or
+_MCP Clients_, such as
+[ClaudeDesktop](https://www.anthropic.com/claude), to Lisp-speaking
+systems configured as backend services. This connection may facilitate
+direct AI-assisted symbolic programming. We have coined the term
+"Lisply" to refer to a lightweight protocol which any Lisp system or
+Lisp-like program can implement for compatibility with this Lisply-MCP
+adapter.
 
 If you configure this adapter without specifying a backend container,
 image name (or host/port for a remote Lisply service), then by
 default it pulls and runs a
 [Gendl](https://gitlab.common-lisp.net/gendl/gendl) container, which
-speaks a Common Lisp superset. Work is in progress on a second
-reference Lisply backend implementation at the [Skewed
-Emacs](https://github.com/gornskew/skewed-emacs) project, which aims
-to launch an Emacs Lisp-speaking backend container image.
+speaks a Common Lisp superset. Work 
+
+is in progress on a second reference Lisply backend implementation at
+the [Skewed Emacs](https://github.com/gornskew/skewed-emacs) project,
+which aims to launch an Emacs Lisp-speaking backend container image.
 
 
 ## Quick Start
