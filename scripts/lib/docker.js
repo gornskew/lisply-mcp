@@ -169,7 +169,7 @@ async function pullLatestBackendImage(config, logger) {
         logger.warn(`Backend image ${currentImage} does not exist locally`);
         
         // If the current image is already the default, we've run out of options
-        const DEFAULT_IMAGE_BASE = 'dcooper8/gendl'; // Define default here to avoid dependency
+        const DEFAULT_IMAGE_BASE = 'genworks/gendl'; // Define default here to avoid dependency
         const DEFAULT_BRANCH = 'master';
         const DEFAULT_IMPL = 'ccl';
         const imageBaseName = config.options.imageBaseName || process.env.LISPLY_IMAGE_BASE || DEFAULT_IMAGE_BASE;

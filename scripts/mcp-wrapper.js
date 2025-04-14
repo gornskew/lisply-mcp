@@ -111,7 +111,7 @@ try {
       .option('--https-port <port>', 'HTTPS port inside container (default: 9443)')
       .option('--swank-port <port>', 'SWANK port inside container (default: 4200)')
       .option('--telnet-port <port>', 'TELNET port inside container (default: 4023)')
-      .option('--image-base-name <n>', 'Base name for Docker image (default: dcooper8/gendl)')
+      .option('--image-base-name <n>', 'Base name for Docker image (default: genworks/gendl)')
       .option('--image-branch <branch>', 'Branch to use for Docker image (default: auto-detected)')
       .option('--docker-image <image>', 'Full Docker image for backend (overrides base name and branch)')
       .option('--lisp-impl <impl>', 'Lisp implementation to use, ccl or sbcl (default: ccl)')

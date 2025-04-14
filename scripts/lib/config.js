@@ -314,7 +314,7 @@ function loadConfig(program) {
   // Constants for Docker image configuration
   const DEFAULT_IMPL = 'ccl';
   const DEFAULT_BRANCH = 'master';
-  const DEFAULT_IMAGE_BASE = 'dcooper8/gendl';
+  const DEFAULT_IMAGE_BASE = 'genworks/gendl';
   
   // Validate Lisp implementation
   const SUPPORTED_IMPLS = ['ccl', 'sbcl'];
