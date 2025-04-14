@@ -1,3 +1,4 @@
+
 # Model Context Protocol (MCP) Wrapper for Lisp or Lisp-like Backends
 
 <img src="scripts/robot-lambda.png" alt="Robot with Lambda symbol" width="300">
@@ -7,10 +8,12 @@ This project is a [Model Context Protocol
 [Large Language Models
 (LLMs)](https://en.wikipedia.org/wiki/Large_language_model) to
 interact with [Lisp-based development
-environments](https://common-lisp.net/) using the lightweight Lisply
+environments](https://common-lisp.net/) using the lightweight _Lisply_
 protocol.
 
-## Who is this Project Aimed At?
+
+## Who Is This For?
+
  - AI practitioners curious about Lisp
  - Lisp practitioners curious about AI
  - CAD designers and automators
