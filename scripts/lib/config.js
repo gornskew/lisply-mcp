@@ -299,17 +299,17 @@ function loadConfig(program) {
   // Configure the backend server details - Use CLI args, env vars, or defaults
   const BACKEND_HOST = options.backendHost || getEnvVar('BACKEND_HOST', '127.0.0.1');
   
-  // Host ports (ports exposed on the host system)
-  const SWANK_HOST_PORT = parseInt10(options.swankHostPort || getEnvVar('SWANK_HOST_PORT', '4201'), 4201, MIN_PORT, MAX_PORT);
-  const HTTP_HOST_PORT = parseInt10(options.httpHostPort || getEnvVar('HTTP_HOST_PORT', '9081'), 9081, MIN_PORT, MAX_PORT);
-  const HTTPS_HOST_PORT = parseInt10(options.httpsHostPort || getEnvVar('HTTPS_HOST_PORT', '10443'), 10443, MIN_PORT, MAX_PORT);
-  const TELNET_HOST_PORT = parseInt10(options.telnetHostPort || getEnvVar('TELNET_HOST_PORT', '5023'), 5023, MIN_PORT, MAX_PORT);
-  
   // Internal ports (inside the container)
   const HTTP_PORT = parseInt10(options.httpPort || getEnvVar('HTTP_PORT', '9080'), 9080, MIN_PORT, MAX_PORT);
   const HTTPS_PORT = parseInt10(options.httpsPort || getEnvVar('HTTPS_PORT', '9443'), 9443, MIN_PORT, MAX_PORT);
   const SWANK_PORT = parseInt10(options.swankPort || getEnvVar('SWANK_PORT', '4200'), 4200, MIN_PORT, MAX_PORT);
   const TELNET_PORT = parseInt10(options.telnetPort || getEnvVar('TELNET_PORT', '4023'), 4023, MIN_PORT, MAX_PORT);
+  
+  // Host ports (ports exposed on the host system) - set to internal port + 1
+  const SWANK_HOST_PORT = parseInt10(options.swankHostPort || getEnvVar('SWANK_HOST_PORT', String(SWANK_PORT + 1)), SWANK_PORT + 1, MIN_PORT, MAX_PORT);
+  const HTTP_HOST_PORT = parseInt10(options.httpHostPort || getEnvVar('HTTP_HOST_PORT', String(HTTP_PORT + 1)), HTTP_PORT + 1, MIN_PORT, MAX_PORT);
+  const HTTPS_HOST_PORT = parseInt10(options.httpsHostPort || getEnvVar('HTTPS_HOST_PORT', String(HTTPS_PORT + 1)), HTTPS_PORT + 1, MIN_PORT, MAX_PORT);
+  const TELNET_HOST_PORT = parseInt10(options.telnetHostPort || getEnvVar('TELNET_HOST_PORT', String(TELNET_PORT + 1)), TELNET_PORT + 1, MIN_PORT, MAX_PORT);
   
   // Constants for Docker image configuration
   const DEFAULT_IMPL = 'ccl';

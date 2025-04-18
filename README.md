@@ -356,7 +356,7 @@ evaluated against a running Lisply backend, best practices are:
 - **DockerHub Authentication**: Auto-pulls latest container images with authentication handling
 - **Existing Service Detection**: Relies on existing live services when available, avoiding the need to start & stop a dedicated container
 - **Multiple Communication Modes**: Support for both HTTP and stdio communication with interactive debugging capabilities
-- **Modular Code Structure**: Well-organized code with clear separation of concerns for maintainability
+- **Modular Code Structure**: Code separated into manageably-sized files.
 
 ## Detailed Installation
 
