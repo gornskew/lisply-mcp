@@ -17,9 +17,9 @@ runtime environments using a lightweight protocol called _Lisply_.
  - AI practitioners curious about Lisp
  - Lisp practitioners curious about AI
  - Anyone interested in Neuro-Symbolic Programming
- - Tinkerers, meddlers, and tamperers from all walks of life
  - Mechanical/Civil Engineers and Designers interested in CAD
    Automation and Knowledge Based Engineering
+ - Tinkerers, meddlers, and tamperers from all walks of life
 
 ## What Is it Meant to Do?
 
