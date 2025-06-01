@@ -1,72 +1,68 @@
 
-# Model Context Protocol (MCP) Wrapper for Lisp or Lisp-like Backends
+# Model Context Protocol (MCP) Middleware for Lisp-based and Lisp-like Environments
 
-<img src="scripts/robot-lambda.png" alt="Robot with Lambda symbol" width="300">
+<img src="scripts/robot-lambda.png" alt="Robot with Lambda machine"
+width="300">
 
 This project is a [Model Context Protocol
-(MCP)](https://modelcontextprotocol.org) software adapter that enables
+(MCP)](https://modelcontextprotocol.org) middleware that enables
 [Large Language Models
 (LLMs)](https://en.wikipedia.org/wiki/Large_language_model) to
 interact with [Lisp-based](https://common-lisp.net/) development and
-runtime environments using the lightweight _Lisply_ protocol.
+runtime environments using a lightweight protocol called _Lisply_.
 
 
-## Who Is This For?
+## Who Is this Meant For?
 
  - AI practitioners curious about Lisp
  - Lisp practitioners curious about AI
- - CAD designers and automators
- - Mechanical engineers
- - Civil engineers
- - Engineers in any field
+ - Anyone interested in Neuro-Symbolic Programming
  - Tinkerers, meddlers, and tamperers from all walks of life
+ - Mechanical/Civil Engineers and Designers interested in CAD
+   Automation and Knowledge Based Engineering
 
-This adapter, also known as a "wrapper," or "MCP wrapper," connects
+## What Is it Meant to Do?
+
+The Lisply-MCP middleware connects
 [MCP-capable](https://modelcontextprotocol.org) AI Agent programs, or
 _MCP Clients_, such as
-[ClaudeDesktop](https://www.anthropic.com/claude), to Lisp-speaking
-systems configured as backend services. This connection may facilitate
-direct AI-assisted symbolic programming. We have coined the term
-"Lisply" to refer to a lightweight protocol which any Lisp system or
-Lisp-like program can implement for compatibility with this Lisply-MCP
-adapter.
+[ClaudeDesktop](https://www.anthropic.com/claude), to Lisp-based
+systems which support a REPL, or Read-Eval-Print Loop. The connection
+is meant to facilitate AI-assisted symbolic programming sometimes
+referred to as _Neuro-Symbolic Programming_. We have coined the term
+"Lisply" to refer to a lightweight protocol which most any Lisp-like
+system can implement to render it compatible with this Lisply-MCP
+middleware.
 
-If you configure this adapter without specifying a backend container,
-image name (or host/port for a remote Lisply service), then by
-default it pulls and runs a
-[Gendl](https://gitlab.common-lisp.net/gendl/gendl) container, which
-speaks a Common Lisp superset. Work 
-
-is in progress on a second reference Lisply backend implementation at
-the [Skewed Emacs](https://github.com/gornskew/skewed-emacs) project,
-which aims to launch an Emacs Lisp-speaking backend container image.
+The idea is that the LLM will be able to generate and evaluate
+arbitrary Lisp expressions, including creating, compiling, loading,
+and testing entire files and projects.
 
 
 ## Quick Start
 
+The following will get you up and running quickly with a minimal
+default configuration and a default public Common Lisp based backend
+running as a Docker container. See the main Contents below for more
+background and detailed configuration options.
+
 ### 1. Install
 
-1. Make sure you have Node.js 18+ installed. If on Windows, this can
-   be directly on Windows or in WSL.
+1. Install Node.js (18+ recommended). If on Windows, this can be
+   installed directly in Windows or in WSL.
 
-2. Make sure you have an up-to-date Docker (20+ recommended)
-   [installed](https://docs.docker.com/engine/install/) on the same
-   host as where the Node.js is running this MCP wrapper script, e.g.,
-   if the script is running through WSL, then Docker must also be
-   installed in the WSL environment, and, likewise, if the Node script
-   is running natively on Windows. Note that Docker Desktop is not
-   needed in a WSL configuration; non-GUI Docker can be installed with
-   standard Linux package managers.
+2. Install [Docker](https://docs.docker.com/engine/install/) (20+
+    recommended) on the same host as where the Node.js is installed.
 
-3. Clone this repo with git to a location of your choice (i.e., a directory
-   that Claude Desktop can access).
+3. Clone this `lisply-mcp` repository to a location where your
+   MCP-capable AI Agent (e.g. Claude Desktop) can access it.
    
  
-### 2. Add to AI Agent's Desktop Configuration (e.g., claude\_desktop\_config.json)
+### 2. Configure your MCP-capabile AI Agent
 
-Add this to your `claude_desktop_config.json` or equivalent, typically
-located at a path like those below (check your Claude Desktop docs for
-the exact location):
+Edit or create your AI Agent's configuration file as shown below. In
+the case of Claude Desktop, the configuration file is typically:
+
 
 ```
 /mnt/c/Users/<user>/AppData/Roaming/Claude/claude_desktop_config.json
@@ -78,16 +74,13 @@ or
 c:\Users\<user>\AppData\Roaming\Claude\claude_desktop_config.json
 ```
 
-Replace `/path/to/cloned/` in the examples below with your actual repo
-location.
-
-Use unique server names for each instance, e.g. "lisply-gendl-1",
-"lisply-gendl-2", etc.
+In the example below, replace `/path/to/cloned/` with the correct path
+to the `./scripts/mcp-wrapper.js` file from the cloned repo:
 
 ```json
 {
   "mcpServers": {
-    "lisply-gendl-1": {
+    "lisply-mcp-1": {
       "command": "node", 
       "args": [
         "/path/to/cloned/lisply-mcp/scripts/mcp-wrapper.js"
@@ -98,12 +91,13 @@ Use unique server names for each instance, e.g. "lisply-gendl-1",
 ```
 
 
-In a WSL scenario with the MCP Client running in Windows:
+Or in a WSL scenario (where the Claude Desktop is running in the
+Windows host):
 
 ```json
 {
   "mcpServers": {
-    "lisply-gendl-2": {
+    "lisply-mcp-1": {
       "command": "wsl", 
       "args": [
         "node", "/path/to/cloned/lisply-mcp/scripts/mcp-wrapper.js"
@@ -113,149 +107,67 @@ In a WSL scenario with the MCP Client running in Windows:
 }
 ```
 
-
-With volume mounting (useful for project access):
-```json
-{
-  "mcpServers": {
-    "lisply-gendl-3": {
-      "command": "node",
-      "args": [
-        "/path/to/cloned/lisply-mcp/scripts/mcp-wrapper.js",
-        "--mount", "/home/user/projects:/projects"
-      ]
-    }
-  }
-}
-```
-
-### 3. Available Tools for AI Agents
-
-The wrapper exposes these MCP tools:
-
-- `ping_lisp`: Check if the Lisply backend is running
-
-- `lisp_eval`: Evaluate Lisp code directly in the Lisply backend
-
-- `http_request`: Make HTTP requests to backend endpoints (this
-  middleware wrapper script makes HTTP client requests to arbitrary
-  endpoints at the Lisply backend's host and HTTP port).
-
-**Important Note about Tools**:
-
-- `lisp_eval` and `ping_lisp` are implemented directly by the backend
-   Lisply server
-
- - `http_request` is implemented explicitly in this middleware and
-   implicitly in the backend - it allows Claude to make HTTP requests
-   to any endpoint on the Lisply backend server, where it is assumed
-   that the Lisply backend may support certain custom-defined
-   endpoints at the same http service port as configured in this
-   wrapper.
-  
- - The `mode` parameter for `lisp_eval` (http/stdio) is also handled
-   explicitly by the middleware to choose how it communicates with the
-   backend. The stdio mode is handled implicitly by the backend,
-   because the backend must provide some kind of REPL as its
-   foreground process in stdio mode, and those stdio streams will be
-   used by this middleware wrapper to send `lisp_eval` requests and
-   receive the results.
+See the main Contents below for further configuration options, for
+example how to have your `~/projects/` filesystem directory be shared
+("mounted") from your host to the default Lisply backend, or how to
+specify an alternative Lisply backend container or service host/port.
 
 
-### 4. Example Lisp Evaluation
+### 3. Restart your AI Agent and Test
 
-After setup and restarting your AI agent, the agent will be able to
-use `lisp_eval` to run code as shown below:
+With the above configuration in place, your freshly restarted AI Agent
+will now have access to an MCP server called `lisply-mcp-1`, with a
+`lisp_eval` MCP tool (among a few other tools discussed in the main
+Contents below). In order to test your setup, you can prompt your LLM
+as follows:
 
-**Syntax Note for the below examples:**
+>
+> Evaluate `(+ 1 2 3)` using the lisp_eval tool, and let me know the
+> result.
+>
 
-`the` is a special Gendl operator used to access messages in the
-current object (implicit `self`) e.g., defined in a `define-object`
-expression.
+The LLM should invoke the requested evaluation and respond with `6` as
+expected. Feel free to experiment with more complex expressions before
+proceeding.
 
-`theo` is a shorthand synonym for `the-object` and is used to send a
-message to an object instance other than `self`, where said other
-object goes as the first argument to `theo`.
 
-For clarity:
+## How Does the Default Minimal Configuration Work?
 
-```
-(the ...)
-``` 
-
-expands exactly to 
-
-```
-(the-object self ...) ;;  == (theo self ...)
-```
-
-Messages may take arguments in parentheses:
-
-```
-(the message-name)            ; message to implicit self, message has no args.
-(the (message-name arg1 arg2)) ; implicit self message with args
-(theo object message-name)     ; explicit object, message without args.
-(theo object (message-name arg1 arg2)) ; explicit object, message with args. 
-
-```
+The minimal default configuration described in the Quick Start aboves
+will pull and run a
+[Gendl](https://gitlab.common-lisp.net/gendl/gendl) docker container
+which contains a Common Lisp superset sporting a standard REPL
+(Read-Eval-Print Loop). Note that work is also in progress on a second
+Lisply backend implementation for Emacs lisp, within the [Skewed
+Emacs](https://github.com/gornskew/skewed-emacs/dot-files/emacs.d/sideloaded/lisply-backend/README.md)
+project.
 
 
 
+## System Overview
 
-
-```lisp
-(in-package :gdl-user)
-(defparameter *box* (make-object 'box :width 10 :length 3 :height 5))
-```
-
-```
-(theo *box* volume) 
-==> 150
-```
-
-## Table of Contents
-
-- [Overview](#overview)
-- [Architecture](#architecture)
-- [Features](#features)
-- [Detailed Installation](#detailed-installation)
-- [Advanced Configuration](#advanced-configuration)
-  - [Command-Line Arguments](#command-line-arguments)
-  - [Environment Variables](#environment-variables)
-- [Docker Integration](#docker-integration)
-- [Communication Modes](#communication-modes)
-- [Advanced Claude Desktop Configuration](#advanced-claude-desktop-configuration)
-- [Real-World Examples](#real-world-examples)
-- [Troubleshooting](#troubleshooting)
-- [License](#license)
-
-## Overview
-
-The Lisply MCP wrapper is implemented in Node.js with a modular
-architecture, and provides a bridge between an AI Agent and any
+The Lisply MCP middleware is implemented as a Javascript program meant
+to run in Node.js, and provides a bridge between your AI Agent and any
 [compliant Lisply backend system](BACKEND-REQS.md). This wrapper
 enables the AI Agent to:
 
-1. Evaluate Lisp code in the Lisply Backend (LB).
-2. Make HTTP requests to any endpoints implemented in the LB.
-3. Access introspection and documentation lookup facilities in the LB.
-4. Create, manipulate, compile, load, and analyze files through Lisp evaluation.
-5. Interact with Lisp debuggers (for locally spawned containers).
-
-### What is Lisply?
+1. Evaluate Lisp code in the Lisply Backend and receive the  results.
+2. Make HTTP requests to any web endpoints implemented in the backend.
+3. Access introspection and documentation lookup facilities in the LB
+   using Lisp evaluation.
+4. Create, manipulate, compile, load, and analyze files, again using
+   Lisp evaluation.
+5. Interact with Lisp debuggers (for locally running backends).
 
 [Lisply](./BACKEND-REQS.md) is a lightweight protocol that specifies a
 minimal yet flexible set of HTTP and standard input/output interfaces,
-a standard set of environment variables, a Docker container image
-naming convention, and several optional capabilities to facilitate AI
-agents controlling Lisp systems.
+a standard set of environment variables, Docker container image naming
+conventions, and several optional capabilities to facilitate AI agents
+controlling your running Lisp system.
 
 ## Architecture
 
-This MCP wrapper implements the Model Context Protocol (MCP) to
-connect Claude or any other MCP-capable AI Agent (also known in this
-context as an "MCP Client") with Lisply backend services. The 
-diagram below attempts to capture how the components interact:
+The diagram below roughly captures how the components interact:
 
 
 ```mermaid
@@ -298,17 +210,17 @@ flowchart TB
     style LispEval fill:#bfb,stroke:#333,stroke-width:1px
 ```
 
-The wrapper script handles:
+The middleware handles:
 1. Starting and managing a Lisply-compliant Docker container if needed
-2. Routing requests between the AI Agent (e.g., Claude Desktop) and the Lisply Backend
-3. Translating between the MCP protocol and the backend [Lisply
-   API](BACKEND-REQS.md)
-4. Error handling and logging
+2. Translating Lisp evaluation requests between the MCP protocol and
+   the backend [Lisply API](BACKEND-REQS.md)
+3. Error handling, Lisp debugger interaction, and logging
 
 ## Security Considerations
 
-Because this adapter (wrapper) allows arbitrary Lisp code to be
-evaluated against a running Lisply backend, best practices are:
+Because Lisply-MCP allows arbitrary Lisp code to be evaluated against
+a running Lisp-based backend, there are certain risks in case the LLM
+were to go "haywire." Therefore, best practices are:
 
 - Allow the wrapper to connect only to a containerized version of a
   Lisply backend. If overriding default host/port, the wrapper will
@@ -316,15 +228,12 @@ evaluated against a running Lisply backend, best practices are:
   allowing this to happen for any http ports being served by programs
   running directly on your host.
 
-- Make sure not to mount any valuable directories to that container;
+- Make sure not to mount any non-expendable directories to that
+  container (see directory mounting configuration instructions below)
 
-- Take steps to [limit RAM and CPU
+- Consider taking steps to [limit RAM and CPU
   usage](https://docs.docker.com/engine/containers/resource_constraints/)
-  of the container. (In a future release, this project aims to support
-  these options as pass-through to the automated container
-  startup). Typical options for reference: use `--memory=512m,
-  --cpus=1, --cap-drop, --read-only`.  Avoid using `--network
-  host`. Prefer isolated networks for safety.
+  of the container.
   
 
 ### Code Modules/Files
@@ -344,19 +253,6 @@ evaluated against a running Lisply backend, best practices are:
 - **mcp-wrapper.js**: <--- Main entry point  <---
 
 
-## Features
-
-- **Configurable Lisply Host & Port**: Configure via command-line arguments or environment variables
-- **Docker Container Management**: Automatically start Lisply container when needed 
-- **Volume Mounting**: Mount host directories into the Lisply container
-- **Run Self in Docker**: Run this wrapper directly on host or inside a container with Docker socket
-- **Error Handling**: Detection and reporting of errors
-- **Detailed Logging**: Detailed logs with timestamps and optional debug mode for more verbosity
-- **Automatic Docker Image Selection**: Sensible defaults based on cloned branch and selected backend type
-- **DockerHub Authentication**: Auto-pulls latest container images with authentication handling
-- **Existing Service Detection**: Relies on existing live services when available, avoiding the need to start & stop a dedicated container
-- **Multiple Communication Modes**: Support for both HTTP and stdio communication with interactive debugging capabilities
-- **Modular Code Structure**: Code separated into manageably-sized files.
 
 ## Detailed Installation
 
@@ -369,7 +265,7 @@ git clone https://github.com/gornskew/lisply-mcp.git
 ```bash
 cd lisply-mcp/scripts
 npm install # optional - the script will attempt to do this also if needed
-chmod +x mcp-wrapper.js # optional on some systems
+chmod +x mcp-wrapper.js # needed on some systems
 ```
 
 3. Ensure Docker is installed on your system.
@@ -381,7 +277,8 @@ node mcp-wrapper.js --help
 
 ## Advanced Configuration
 
-Optional settings for advanced users, with defaults suitable for most cases:
+Optional settings for advanced users, with defaults suitable for most
+cases:
 
 ### Command-Line Arguments
 
@@ -424,7 +321,7 @@ Options:
 The script also supports configuration via environment variables. You
 can specify variables with the "LISPLY_" prefix or with no prefix:
 
-**Note:** It's important to keep straight the difference between host
+**Note:** It is important to keep straight the difference between host
 ports (listening on and reachable from the host system) and container
 ports (internal to the container, visible to the Lisply backend
 service process):
@@ -445,7 +342,7 @@ service process):
 | `START_SWANK` or `LISPLY_START_SWANK` | Start SWANK service | true |
 | `START_TELNET` or `LISPLY_START_TELNET` | Start TELNET service | false |
 | `DOCKER_IMAGE` or `LISPLY_DOCKER_IMAGE` | Docker image for backend | (auto-detected) |
-| `IMAGE_BASE` or `LISPLY_IMAGE_BASE` | Base name for Docker image | dcooper8/gendl |
+| `IMAGE_BASE` or `LISPLY_IMAGE_BASE` | Base name for Docker image | genworks/gendl |
 | `IMAGE_BRANCH` or `LISPLY_IMAGE_BRANCH` | Branch for Docker image | (auto-detected) |
 | `LISP_IMPL` or `LISPLY_LISP_IMPL` | Lisp implementation to use | ccl |
 | `AUTO_START` or `LISPLY_AUTO_START` | Enable auto-starting container | true |
@@ -463,63 +360,60 @@ service process):
 
 ## Docker Integration
 
-This MCP wrapper can interact with both local and remote Lisply
-backends. In the local case, the wrapper runs Docker commands to pull
-and manage local Lisply backend containers.
+Lisply-MCP can interact with both local and remote Lisply
+backends. For the local case, the middleware can automatically run
+Docker commands to pull and manage the appropriate Lisply backend
+container.
 
 ### Docker Image Selection
 
-The wrapper selects a default Docker image based on the detected
-current git branch of your Lisply-MCP repository:
+The middleware selects a default Docker image name based on the
+detected current git branch of your Lisply-MCP repository:
 
 1. The Lisply Docker image naming convention follows the pattern:
    `${DOCKER_USER}/${IMAGE_BASE}:${IMAGE_BRANCH}-${LISP_IMPL}`
    - `${DOCKER_USER}` Username at hub.docker.com. defaults to `genworks`.
    - `${IMAGE_BASE}` Main name of the Lisply backend. Defaults to `gendl`.
-   - `${IMAGE_BRANCH}` defaults to the current git branch name, if
-     any, where the wrapper script is situated, with any slashes (`/`)
-     converted to double hyphens (`--`)
+   - `${IMAGE_BRANCH}` defaults to the current git branch name where
+     the wrapper script is situated, with any slashes (`/`) converted
+     to double hyphens (`--`)
      - For example, `release/1598` becomes `release--1598` in the image tag
      - `devo` branch will use the image tag `devo`
+	 - If no git branch is detected, defaults to `master`.
    - `${LISP_IMPL}` is the Lisp implementation in case the base Lisply
      backend sports multiple available Lisp flavors (e.g., ccl, sbcl
      are available for current public Gendl builds).
 
-2. This wrapper script will attempt to pull or use an image matching
-   your current branch:
-   - First tries to pull the image matching your current branch from Docker Hub.
-   - If pull fails, checks if the image exists locally.
-   - If neither works, falls back to the `master` branch image.
+2. The middleware will attempt to pull a newer image if one exists:
+   - First tries to pull a newer image from Docker Hub.
+   - If pull fails or local is up to date, uses the local one.
 
 3. You can override the automatic selection with:
    - The `--docker-image` command-line argument (overrides
     `--image-base-name` and `--image-branch` entirely)
    - The `--image-base-name` and/or `--image-branch` arguments
    - The `LISPLY_DOCKER_IMAGE` environment variable
-   - The `LISPLY_IMAGE_BASE` and `LISPLY_IMAGE_BRANCH` environment variables
+   - The `LISPLY_IMAGE_BASE` and `LISPLY_IMAGE_BRANCH` environment
+     variables
 
 4. For the Lisp implementation:
    - Specify with `--lisp-impl` (ccl or sbcl for current gendl builds)
    - Or use the `LISPLY_LISP_IMPL` environment variable
-   - Defaults to ccl if not specified
+   - Defaults to `ccl` if not specified, `sbcl` is also a valid choice
+     for the default Gendl images.
 
-### Docker Hub Authentication
+### DockerHub Authentication
 
-The wrapper will attempt to pull the latest version of the appropriate
-Docker image before starting a container. This behavior includes:
-
-1. Checking for Docker Hub authentication
-2. Attempting to log in if not authenticated (using stored credentials or interactive login)
-3. Pulling the latest image matching your configuration
-4. Falling back to using a local image if pull fails
-5. Attempting to pull the default image (master-ccl) as a last resort if needed
+The wrapper will attempt to log in to DockerHub using stored
+credentials. However, the default container images are public and
+should be available anonymously without `docker login`. 
 
 
 ### Volume Mounting
 
-You can mount host directories into the Lisply container to share
-files between your host system and the container (note multiple mount
-points can be specified):
+You can mount host directories into the backend Lisply container to
+share files between your host system and the container (note multiple
+mount points can be specified):
 
 ```bash
 {
@@ -558,18 +452,13 @@ docker exec lisply-mcp-<hash> usermod -u 1001 lisply-user
 ### Existing Service Detection
 
 The wrapper will check if a Lisply service is already running on the
-specified host and ports and use it if it exists, before attempting to
-start a container:
-
-1. HTTP service (HTTP_HOST_PORT) is checked first as the primary service
-2. SWANK service (SWANK_HOST_PORT) is checked as a fallback (and could
-   potentially be used for debugging if it works and http
-   didn't). 
+specified http host and ports and use it if it exists, before
+attempting to pull and/or start a container.
 
 
 #### Existing Services Override Local Container Settings
 
-When an existing service is detected on the specified host and port
+When an existing service is detected on the specified host and port,
 all Docker-related settings will be ignored:
 
    - `--docker-image`, `--image-base-name`, `--image-branch`, and `--lisp-impl`
@@ -579,17 +468,13 @@ all Docker-related settings will be ignored:
    - `--docker-socket` path
    - `--no-auto-start` flag
 
-The wrapper will display messages about which settings are being ignored.
-
-The wrapper is intended to work with arbitrary local and remote
-already-running Lisply-compliant services, in which case it doesn't
-spawn any container at all.
-
+In this case, the wrapper will log messages about which settings are
+being ignored.
 
 ## Communication Modes
 
-This Lisply MCP wrapper supports two primary modes of communication
-with configured Lisply backends: HTTP mode and stdio (Standard
+This middleware supports two primary modes of communication with
+configured Lisply backends: HTTP mode and stdio (Standard
 Input/Output) mode.
 
 ### HTTP Mode
@@ -599,51 +484,49 @@ local and remote Lisply backends. This mode uses the standard HTTP
 endpoints that all Lisply backends are required to implement.
 
 **Characteristics:**
-- Structured responses with separate result and stdout fields
-- Error handling that captures and returns errors as strings
-- Compatible with all Lisply backends, local or remote
+- Structured responses with separate result, stdout, and error fields
 - Suitable for most casual use cases
-- Response format: `Result: <result>, Stdout: <output>, Error: <any error>`
+- Response format: `{Result: <result>, Stdout: <output>, Error: <any error>}`
 
 **Example response in HTTP mode:**
 ```
-Result: 6, Stdout: This is a message to standard output
+{"Result": "6", "Stdout": "This is a message to standard output"}
 ```
 
 ### Stdio Mode
 
-Stdio mode provides more of a raw REPL experience for LLMs and enables
-basic interactive debugging. This mode expects to leverage the
-backend's native REPL interface and any included command-driven
-debugger.
+Stdio mode provides more of a raw REPL experience for the LLM and
+enables the LLM to engage in interactive debugging. This mode expects
+to leverage the backend's native REPL interface and any included
+command-driven debugger.
 
 **Characteristics:**
 - Raw REPL-like output without structured formatting
 - Support for interactive debugger when errors occur
-- Only available for local containers started by an instance of this
-  MCP wrapper
+- Only available for local containers started by this middleware
 - Ideal for development, debugging, and complex interactions
 - Captures standard output followed by return-value of evaluated
-  expressions in same stream
+  expressions in same stream, so the LLM will have to distinguish
+  these just as a human user would
 
 **Debugger Support:** When an error occurs in stdio mode, the Lisp
 debugger can be interacted with. The wrapper detects debugger prompts
 and provides metadata about the debugger state to the AI Agent. This
 functionality relies on hardcoded prompt patterns in the wrapper code
 which would need to be augmented to support new Lisply backends with
-different REPL and debugger prompts.
+different REPL and debugger prompts (patches welcome).
 
 **Mode Selection:**
 - Default mode is HTTP.
-- To use stdio mode for a particular tool call, specify `mode:
-  "stdio"` in the `lisp_eval` tool parameters.
-- Stdio mode can be banned for the session by configuring with the `--no-use-stdio` flag or
-  `LISPLY_NO_USE_STDIO=true`.
+- To use stdio mode for a particular tool call, ask the LLM to specify
+  `mode: "stdio"` in the `lisp_eval` tool parameters.
+- Stdio mode can be banned for the session by configuring with the
+  `--no-use-stdio` flag or `LISPLY_NO_USE_STDIO=true`.
 
 If stdio mode is requested but banned or otherwise not available, the
 wrapper will fall back to HTTP mode. LLM callers using stdio mode need
 to be aware of this, because the response from the HTTP fallback comes
-packaged in JSON instead of raw.
+packaged in JSON instead of in raw format.
 
 ## Usage Examples 
 
@@ -660,12 +543,11 @@ the Docker socket (and some other port tricks may be necessary):
 docker run -v /var/run/docker.sock:/var/run/docker.sock -v /path/to/scripts:/app node:18 node /app/mcp-wrapper.js
 ```
 
-## Typical Setup
+## Adding a Separate, Compatible Filesystem MCP Server
 
-Here's a `claude_desktop_config.json` which sets up a convenience
-filesystem-access mcp server as well as our `lisply-1` server with a
-common mount, using this `scripts/mcp-wrapper.js` script, with some
-typical custom options:
+Below is a `claude_desktop_config.json` which sets up a filesystem mcp
+server as well as our `lisply-mcp-1` server, with a common mount
+shared between the two mcp servers:
 
 
 ```json
@@ -686,17 +568,13 @@ typical custom options:
         "/projects"
       ]
     },
-    "lisply": {
+    "lisply-mcp-1": {
       "command": "wsl",
       "args": [
         "node",
         "/home/user/projects/lisply-mcp/scripts/mcp-wrapper.js",
         "--mount", "/home/user/projects:/projects"
-      ],
-      "env": {
-        "NODE_ENV": "production",
-        "DEBUG": "*"
-      }
+      ]
     }
   },
   "globalShortcut": ""
@@ -731,7 +609,8 @@ within the Lisply environment with these parameters:
 
 The `http_request` tool enables the AI Agent to interact with any HTTP
 endpoint exposed by the Lisply backend (the following example works
-with our default backend):
+with our default backend, which has a built-in `/color-map` http
+endpoint):
 
 ```json
 {
@@ -745,7 +624,8 @@ with our default backend):
 
 #### Ping Tool (`ping_lisp`)
 
-The `ping_lisp` tool lets Claude check if the Lisply server is running:
+The `ping_lisp` tool lets Claude confirm that the Lisply server is
+running:
 
 ```
 ping_lisp()
@@ -802,8 +682,8 @@ Now, let's change the height from 5 to 8:
       (theo *my-box* length))
 ```
 
-This box can be visualized by creating a web interface or using
-built-in visualization tools. See [Gendl
+This box can be visualized by creating a web interface or using a
+built-in gendl visualization tool such as `geysr`. See [Gendl
 Documentation](https://gornschool.com) for details.
 
 
@@ -829,7 +709,7 @@ First, let's use HTTP mode (the default):
 
 Response in HTTP mode:
 ```
-Result: 6, Stdout: This is a message to standard output
+{"Result": "6", "Stdout": "This is a message to standard output"}
 ```
 
 Now, let's use stdio mode for the same expression:
@@ -913,28 +793,14 @@ backend:
 docker ps | grep lisply
 ```
 
-2. Enable debug logging:
-```json
-{
-  "mcpServers": {
-    "lisply": {
-      "command": "wsl", 
-      "args": [
-        "node",
-        "/path/to/cloned/lisply-mcp/scripts/mcp-wrapper.js"
-      ]
-    }
-  }
-}
-```
 
-3. Check the wrapper's log file:
+2. Check the wrapper's log file:
 ```bash
 tail -f /tmp/lisply-mcp-wrapper.log
 ```
 
-4. Check the Claude Desktop log file with Windows tools
-   e.g. Notepad. This is typically something along the lines of:
+3. Check the Claude Desktop log file with Windows tools
+   e.g. Notepad. This is typically in a location such as:
 
 WSL/Linux:
 ```
@@ -957,6 +823,10 @@ curl http://localhost:9081/lisply/ping-lisp
 M-x slime-connect  ;; from emacs
 ```
 
+Note that the setting up the
+[Skewed-Emacs](https://github.com/gornskew/skewed-emacs) configuration
+will enable `M-x slime-connect` in your emacs.
+
 #### Permission Issues
 
 If you encounter permission errors:
@@ -976,20 +846,11 @@ sudo usermod -aG docker $USER
 ls -l /path/to/mounted/directory
 ```
 
-Note: Files created by the Lisply backends may end up owned by
-different users. This can be fixed with certain `docker exec` commands
-which we hope to automate, for example one approach is to modify the
-UID of the running user in the container at startup to match the host
-user. Implementation note: Simply passing a `-u` argument to the
-`docker run` command as we see in the `mcp/filesystem` server example
-in the Typical Setup section. What is the wrapper currently doing in
-terms of `-u` when it spawns docker?
-
 ### Diagnostic Commands
 
-Use these commands to diagnose issues:
+Use these commands to diagnose general issues:
 
-1. Check wrapper logs:
+1. Check the middleware logs:
 ```bash
 tail -f /tmp/lisply-mcp-wrapper.log
 ```
@@ -1016,23 +877,22 @@ v3.0 (AGPL-3.0), the same license used by Gendl.
 
 ### License Implications
 
-**Important Note**: Simply using this MCP server to interact with
-Gendl and obtain outputs does not trigger the requirements of the
-AGPL. You can use this wrapper to interact with Gendl without being
-required to share your code.
+Simply using this MCP server to interact with a Lisply backend and
+obtain outputs does not trigger the requirements of the AGPL, e.g. you
+can use this wrapper to interact with Gendl without being required to
+share your code.
 
-However, if you modify this wrapper or a license-compatible backend
-such as Gendl, and distribute and/or host a service based on that
-result, then the AGPL would require you to share your modifications
-with the recipients of the distribution or users of that service. Of
-course, if you have any doubts the standard advice is to consult an
-attorney.
+However, if you modify or extend this wrapper, or a license-compatible
+Lisply backend such as Gendl, and wish to distribute and/or host a
+service based on that result (commercial or not), then the AGPL would
+require you to share your modifications with the downstream recipients
+or users. 
 
 For applications that need to keep their source code closed, Genworks
-offers a release from AGPL restrictions for a 5% self-reported
-quarterly revenue royalty. More information and a payment gateway will
-be available at [payments.genworks.com](https://payments.genworks.com)
-(forthcoming).
+has begun offering an "escape clause" from AGPL restrictions for a 5%
+self-reported quarterly revenue royalty. More information and a
+payment gateway are available at
+[royalties.genworks.com](https://royalties.genworks.com).
 
 The full text of the license can be found in the COPYING.txt file in
-this directory.
+this directory. 
