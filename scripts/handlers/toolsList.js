@@ -14,6 +14,7 @@
 
 const { makeHttpRequest } = require('../lib/server');
 const { sendStandardResponse, sendErrorResponse } = require('../lib/utils');
+const { createPrefixedToolName } = require('../lib/config');
 
 /**
  * Handle tool list requests
@@ -106,6 +107,19 @@ function handleToolsList(request, config, logger) {
             "required": ["path"]
           }
         });
+      }
+
+      // Prefix all tool names with server name for disambiguation
+      logger.debug(`Prefixing tool names with server name: ${config.SERVER_NAME}`);
+      for (let i = 0; i < toolsData.tools.length; i++) {
+        const tool = toolsData.tools[i];
+        const originalName = tool.name;
+        const prefixedName = createPrefixedToolName(config.SERVER_NAME, originalName);
+        
+        if (prefixedName !== originalName) {
+          logger.debug(`Renaming tool: ${originalName} -> ${prefixedName}`);
+          tool.name = prefixedName;
+        }
       }
 
       sendStandardResponse(request, toolsData, logger);

@@ -28,7 +28,7 @@ function handleInitialize(request, config, logger) {
         tools: { listChanged: false }
       },
       serverInfo: {
-        name: 'lisply-mcp',
+        name: config.SERVER_NAME,
         version: config.VERSION
       }
     }

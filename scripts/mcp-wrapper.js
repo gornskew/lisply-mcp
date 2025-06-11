@@ -131,6 +131,7 @@ try {
       .option('--lisp-eval-endpoint <n>', 'Endpoint name for Lisp evaluation (default: lisp-eval)')
       .option('--http-request-endpoint <n>', 'Endpoint name for HTTP requests (default: http-request)')
       .option('--ping-endpoint <n>', 'Endpoint name for ping (default: ping-lisp)')
+      .option('--server-name <name>', 'MCP server name for tool prefixing (default: lisply-mcp)')
       .parse(process.argv);
 
   // Load configuration

@@ -285,6 +285,93 @@ function sanitizeDockerTag(input) {
 }
 
 /**
+ * Detect server name from environment or process context
+ * @returns {string|null} - Detected server name or null if not found
+ */
+function detectServerNameFromEnvironment() {
+  // Check if we're running under a process manager that might set useful env vars
+  // MCP servers often get launched with specific environment context
+  
+  // Try to detect from common environment variables that might indicate the server purpose
+  const envHints = [
+    process.env.MCP_SERVER_NAME,
+    process.env.LISPLY_SERVER_TYPE,
+    process.env.SERVER_TYPE,
+    process.env.BACKEND_TYPE
+  ];
+  
+  for (const hint of envHints) {
+    if (hint && hint.trim()) {
+      return hint.trim();
+    }
+  }
+  
+  // Try to detect from command line arguments or working directory
+  const cwd = process.cwd();
+  
+  // Look for hints in the current working directory path
+  if (cwd.includes('gendl')) return 'gendl';
+  if (cwd.includes('emacs')) return 'emacs';
+  
+  // Check if we're connecting to specific ports that might indicate the backend type
+  const args = process.argv;
+  for (let i = 0; i < args.length - 1; i++) {
+    if (args[i] === '--http-host-port') {
+      const port = args[i + 1];
+      if (port === '7080') return 'emacs'; // Common port for Emacs lisply backend
+      if (port === '9081') return 'gendl'; // Common port for Gendl backend
+    }
+    if (args[i] === '--backend-host' && i < args.length - 2) {
+      // Check if next argument after host is a port
+      const nextArg = args[i + 2];
+      if (nextArg === '7080') return 'emacs';
+      if (nextArg === '9081') return 'gendl';
+    }
+  }
+  
+  return null;
+}
+
+/**
+ * Create a prefixed tool name using the server name
+ * @param {string} serverName - Server name to use as prefix
+ * @param {string} toolName - Original tool name
+ * @returns {string} - Prefixed tool name (e.g., "gendl__lisp_eval")
+ */
+function createPrefixedToolName(serverName, toolName) {
+  if (!serverName || !toolName) return toolName;
+  
+  // Extract the core name from server name if it contains "lisply-mcp-" or similar
+  const coreServerName = serverName
+    .replace(/^lisply-mcp-?/, '') // Remove "lisply-mcp" prefix and optional dash
+    .replace(/^mcp-?/, '')        // Remove "mcp" prefix and optional dash
+    .replace(/-+$/, '');          // Remove trailing dashes
+  
+  // If we have a meaningful core name, use it; otherwise use full server name
+  const prefix = coreServerName || serverName;
+  
+  return `${prefix}__${toolName}`;
+}
+
+/**
+ * Extract the original tool name from a prefixed tool name
+ * @param {string} prefixedToolName - Prefixed tool name (e.g., "gendl__lisp_eval")
+ * @returns {string} - Original tool name (e.g., "lisp_eval")
+ */
+function extractOriginalToolName(prefixedToolName) {
+  if (!prefixedToolName) return prefixedToolName;
+  
+  const parts = prefixedToolName.split('__');
+  if (parts.length >= 2) {
+    // Return everything after the first "__"
+    return parts.slice(1).join('__');
+  }
+  
+  // If no prefix found, return as-is
+  return prefixedToolName;
+}
+
+/**
  * Load and validate the configuration
  * @param {Object} program - Commander program instance
  * @returns {Object} - Configuration object
@@ -356,6 +443,21 @@ function loadConfig(program) {
   const HTTP_REQUEST_ENDPOINT_NAME = options.httpRequestEndpoint || getEnvVar('HTTP_REQUEST_ENDPOINT', 'http-request');
   const PING_ENDPOINT_NAME = options.pingEndpoint || getEnvVar('PING_ENDPOINT', 'ping-lisp');
   
+  // Server name for MCP identification and tool prefixing
+  // Auto-detect if not explicitly provided, considering the actual port being used
+  let detectedName = detectServerNameFromEnvironment();
+  
+  // If no detection from args, check the actual HTTP port that will be used
+  if (!detectedName) {
+    if (HTTP_HOST_PORT === 7080) {
+      detectedName = 'emacs';
+    } else if (HTTP_HOST_PORT === 9081) {
+      detectedName = 'gendl';
+    }
+  }
+  
+  const SERVER_NAME = options.serverName || getEnvVar('SERVER_NAME', detectedName || 'lisply-mcp');
+  
   // Construct full endpoint paths with prefix
   const BASE_PATH = `/${ENDPOINT_PREFIX}`;
   const EVAL_ENDPOINT = `${BASE_PATH}/${LISP_EVAL_ENDPOINT_NAME}`;
@@ -404,6 +506,7 @@ function loadConfig(program) {
     REPL_PROMPT,
     EVAL_TIMEOUT,
     ENDPOINT_PREFIX,
+    SERVER_NAME,
     BASE_PATH,
     EVAL_ENDPOINT,
     HTTP_REQUEST_ENDPOINT,
@@ -430,5 +533,8 @@ module.exports = {
   checkPortConflicts,
   getEnvMounts,
   sanitizeDockerTag,
+  detectServerNameFromEnvironment,
+  createPrefixedToolName,
+  extractOriginalToolName,
   loadConfig
 };

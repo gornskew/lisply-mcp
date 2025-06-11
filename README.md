@@ -80,10 +80,11 @@ to the `./scripts/mcp-wrapper.js` file from the cloned repo:
 ```json
 {
   "mcpServers": {
-    "lisply-mcp-1": {
+    "lisply-gendl": {
       "command": "node", 
       "args": [
-        "/path/to/cloned/lisply-mcp/scripts/mcp-wrapper.js"
+        "/path/to/cloned/lisply-mcp/scripts/mcp-wrapper.js",
+        "--server-name", "gendl"
       ]
     }
   }
@@ -97,10 +98,11 @@ Windows host):
 ```json
 {
   "mcpServers": {
-    "lisply-mcp-1": {
+    "lisply-gendl": {
       "command": "wsl", 
       "args": [
-        "node", "/path/to/cloned/lisply-mcp/scripts/mcp-wrapper.js"
+        "node", "/path/to/cloned/lisply-mcp/scripts/mcp-wrapper.js",
+        "--server-name", "gendl"
       ]
     }
   }
@@ -112,17 +114,80 @@ example how to have your `~/projects/` filesystem directory be shared
 ("mounted") from your host to the default Lisply backend, or how to
 specify an alternative Lisply backend container or service host/port.
 
+### Running Multiple Lisply Servers
+
+You can run multiple Lisply MCP servers simultaneously. The server name for tool 
+prefixing is **automatically detected** based on configuration, or you can specify 
+it explicitly.
+
+**Auto-detection works by:**
+- Using `--http-host-port 7080` → detects as "emacs"
+- Using `--http-host-port 9081` → detects as "gendl"  
+- Checking environment variables like `MCP_SERVER_NAME`
+- Falling back to "lisply-mcp" if no detection possible
+
+**Simple configuration (auto-detection):**
+```json
+{
+  "mcpServers": {
+    "gendl": {
+      "command": "node",
+      "args": [
+        "/path/to/cloned/lisply-mcp/scripts/mcp-wrapper.js",
+        "--http-host-port", "9081"
+      ]
+    },
+    "emacs": {
+      "command": "node", 
+      "args": [
+        "/path/to/cloned/lisply-mcp/scripts/mcp-wrapper.js",
+        "--http-host-port", "7080",
+        "--backend-host", "localhost",
+        "--no-auto-start"
+      ]
+    }
+  }
+}
+```
+
+**Explicit configuration (if you need custom names):**
+```json
+{
+  "mcpServers": {
+    "my-gendl": {
+      "command": "node",
+      "args": [
+        "/path/to/cloned/lisply-mcp/scripts/mcp-wrapper.js",
+        "--server-name", "custom-gendl",
+        "--http-host-port", "9081"
+      ]
+    }
+  }
+}
+```
+
+This configuration will provide you with tools like:
+- `gendl__lisp_eval` - Evaluate Common Lisp expressions in Gendl
+- `gendl__http_request` - Make HTTP requests to Gendl web endpoints
+- `emacs__lisp_eval` - Evaluate Emacs Lisp expressions
+- `emacs__http_request` - Make HTTP requests to Emacs endpoints
+
+Each server operates independently, allowing you to work with multiple
+Lisp environments simultaneously without tool name conflicts.
+
 
 ### 3. Restart your AI Agent and Test
 
 With the above configuration in place, your freshly restarted AI Agent
-will now have access to an MCP server called `lisply-mcp-1`, with a
-`lisp_eval` MCP tool (among a few other tools discussed in the main
-Contents below). In order to test your setup, you can prompt your LLM
-as follows:
+will now have access to an MCP server called `lisply-gendl`, with a
+`gendl__lisp_eval` MCP tool (among a few other tools discussed in the main
+Contents below). Note that tools are automatically prefixed with the server
+name to avoid conflicts when running multiple Lisply servers.
+
+In order to test your setup, you can prompt your LLM as follows:
 
 >
-> Evaluate `(+ 1 2 3)` using the lisp_eval tool, and let me know the
+> Evaluate `(+ 1 2 3)` using the gendl__lisp_eval tool, and let me know the
 > result.
 >
 
@@ -313,6 +378,7 @@ Options:
   --lisp-eval-endpoint <n>             Endpoint name for Lisp evaluation (default: lisp-eval)
   --http-request-endpoint <n>          Endpoint name for HTTP requests (default: http-request)
   --ping-endpoint <n>                  Endpoint name for ping (default: ping-lisp)
+  --server-name <name>                 MCP server name for tool prefixing (default: lisply-mcp)
   -h, --help                           Display help for command
 ```
 
@@ -357,6 +423,7 @@ service process):
 | `LISP_EVAL_ENDPOINT` or `LISPLY_LISP_EVAL_ENDPOINT` | Endpoint name for Lisp evaluation | lisp-eval |
 | `HTTP_REQUEST_ENDPOINT` or `LISPLY_HTTP_REQUEST_ENDPOINT` | Endpoint name for HTTP requests | http-request |
 | `PING_ENDPOINT` or `LISPLY_PING_ENDPOINT` | Endpoint name for ping | ping-lisp |
+| `SERVER_NAME` or `LISPLY_SERVER_NAME` | MCP server name for tool prefixing | lisply-mcp |
 
 ## Docker Integration
 
@@ -568,11 +635,12 @@ shared between the two mcp servers:
         "/projects"
       ]
     },
-    "lisply-mcp-1": {
+    "lisply-gendl": {
       "command": "wsl",
       "args": [
         "node",
         "/home/user/projects/lisply-mcp/scripts/mcp-wrapper.js",
+        "--server-name", "gendl",
         "--mount", "/home/user/projects:/projects"
       ]
     }
@@ -583,10 +651,11 @@ shared between the two mcp servers:
 
 ### Tool Details for Claude
 
-#### Lisp Evaluation Tool (`lisp_eval`)
+#### Lisp Evaluation Tool (`<server>__lisp_eval`)
 
-The `lisp_eval` tool allows Claude to evaluate Lisp code directly
-within the Lisply environment with these parameters:
+The `lisp_eval` tool (prefixed with the server name, e.g., `gendl__lisp_eval`) 
+allows Claude to evaluate Lisp code directly within the Lisply environment 
+with these parameters:
 
 - `code` (required): The Lisp code to evaluate
 - `package` (optional): The package to use for the evaluation
@@ -605,12 +674,12 @@ within the Lisply environment with these parameters:
 | Use Case | Clean integration, simple queries | Development, debugging, complex interactions |
 
 
-#### HTTP Request Tool (`http_request`)
+#### HTTP Request Tool (`<server>__http_request`)
 
-The `http_request` tool enables the AI Agent to interact with any HTTP
-endpoint exposed by the Lisply backend (the following example works
-with our default backend, which has a built-in `/color-map` http
-endpoint):
+The `http_request` tool (prefixed with the server name, e.g., `gendl__http_request`) 
+enables the AI Agent to interact with any HTTP endpoint exposed by the Lisply 
+backend (the following example works with our default backend, which has a 
+built-in `/color-map` http endpoint):
 
 ```json
 {
@@ -622,13 +691,13 @@ endpoint):
 }
 ```
 
-#### Ping Tool (`ping_lisp`)
+#### Ping Tool (`<server>__ping_lisp`)
 
-The `ping_lisp` tool lets Claude confirm that the Lisply server is
-running:
+The `ping_lisp` tool (prefixed with the server name, e.g., `gendl__ping_lisp`) 
+lets Claude confirm that the Lisply server is running:
 
 ```
-ping_lisp()
+<server>__ping_lisp()
 ```
 
 ## Real-World Examples
