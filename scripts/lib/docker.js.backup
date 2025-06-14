@@ -365,31 +365,6 @@ function waitForBackendServer(config, logger, checkBackendAvailability, maxWaitS
 }
 
 /**
- * Check if the Docker image is Gendl-based (not Emacs-based)
- * @param {string} dockerImage - Docker image name
- * @returns {boolean} - Whether the image is Gendl-based
- */
-function isGendlBasedImage(dockerImage) {
-  const imageNameLower = dockerImage.toLowerCase();
-  
-  // List of Emacs-based image patterns
-  const emacsPatterns = [
-    'emacs',
-    'skewed-emacs'
-  ];
-  
-  // Check if any Emacs pattern matches
-  for (const pattern of emacsPatterns) {
-    if (imageNameLower.includes(pattern)) {
-      return false; // This is an Emacs-based image
-    }
-  }
-  
-  // If no Emacs patterns match, assume it's Gendl-based
-  return true;
-}
-
-/**
  * Start a backend container
  * @param {Object} config - Configuration object
  * @param {Object} logger - Logger instance
@@ -457,14 +432,10 @@ function startBackendContainer(config, logger, checkBackendAvailability) {
         '-e', `SWANK_PORT=${config.SWANK_PORT}`,
         '-e', `SWANK_HOST_PORT=${config.SWANK_HOST_PORT}`,
         '-p', `${config.HTTP_HOST_PORT}:${config.HTTP_PORT}`,
-        
-        // Conditional port mappings based on image type
-        ...(config.START_HTTPS ? ['-p', `${config.HTTPS_HOST_PORT}:${config.HTTPS_PORT}`] : []),
-        
-        // Only map SWANK port for Gendl-based images (not for Emacs-based images)
-        ...(config.START_SWANK && isGendlBasedImage(dockerImage) ? ['-p', `${config.SWANK_HOST_PORT}:${config.SWANK_PORT}`] : []),
-        
-        ...(config.START_TELNET ? ['-p', `${config.TELNET_HOST_PORT}:${config.TELNET_PORT}`] : []),
+
+	  ////...(config.START_HTTPS ? ['-p', `${config.HTTPS_HOST_PORT}:${config.HTTPS_PORT}`] : []),
+          ////...(config.START_SWANK ? ['-p', `${config.SWANK_HOST_PORT}:${config.SWANK_PORT}`] : []),
+          ////...(config.START_TELNET ? ['-p', `${config.TELNET_HOST_PORT}:${config.TELNET_PORT}`] : []),
 	  
           // Add any mount points
           // Add ports for HTTPS and TELNET if enabled
