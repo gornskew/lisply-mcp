@@ -1,7 +1,10 @@
 /**
  * docker.js
  * 
- * Docker container management for the MCP wrapper
+ ...(config.START_HTTPS ? ['-p', `${config.HTTPS_HOST_PORT}:${config.HTTPS_PORT}`] : []),
+        ...(config.START_SWANK ? ['-p', `${config.SWANK_HOST_PORT}:${config.SWANK_PORT}`] : []),
+        ...(config.START_TELNET ? ['-p', `${config.TELNET_HOST_PORT}:${config.TELNET_PORT}`] : []),
+        // Add any mount points * Docker container management for the MCP wrapper
  */
 
 const fs = require('fs');
@@ -170,42 +173,6 @@ function execPromise(command) {
       }
     });
   });
-}
-
-/**
- * Ensure a shared Docker network exists for lisply-mcp containers
- */
-async function ensureSharedNetwork(logger) {
-  const networkName = 'lisply-mcp-network';
-  try {
-    await execPromise(`docker network inspect ${networkName}`);
-    logger.debug(`Shared network ${networkName} already exists`);
-    return networkName;
-  } catch (error) {
-    logger.info(`Creating shared Docker network: ${networkName}`);
-    try {
-      await execPromise(`docker network create ${networkName}`);
-      logger.info(`Successfully created shared Docker network: ${networkName}`);
-      return networkName;
-    } catch (createError) {
-      // Handle the case where the network was created by another process
-      // between our inspect and create calls (race condition)
-      if (createError.message && createError.message.includes('already exists')) {
-        logger.debug(`Network ${networkName} was created by another process during our attempt`);
-        return networkName;
-      }
-      // If it's a different error, re-throw it
-      throw createError;
-    }
-  }
-}
-
-/**
- * Generate a meaningful container name based on image type
- */
-function generateContainerName(dockerImage, serverName) {
-  const imageType = isGendlBasedImage(dockerImage) ? 'gendl' : 'emacs';
-  return `lisply-${imageType}`;
 }
 
 /**
@@ -469,49 +436,49 @@ function startBackendContainer(config, logger, checkBackendAvailability) {
       TELNET_HOST_PORT: ${config.TELNET_HOST_PORT}
       `);
       
-      // Ensure shared network exists and generate meaningful container name
-      const networkName = await ensureSharedNetwork(logger);
-      const containerName = generateContainerName(dockerImage, config.SERVER_NAME);
+      // Generate a unique container name with timestamp
+      // Extract the base name from the image for the container name
+      const imageBaseName = dockerImage.split('/').pop().split(':')[0];
+      const containerName = `lisply-mcp-${new Date().getTime()}`; // name lisply to match README.md
       
       // Prepare docker arguments for spawn
-      const dockerArgs = [
-        'run',
-        '-i',
-        '--rm',
-        '--name', containerName,
-        '--network', networkName,
-        '--hostname', isGendlBasedImage(dockerImage) ? 'gendl-backend' : 'emacs-backend',
-        '-v', `/tmp/.X11-unix:/tmp/.X11-unix`,
-        '-e', `DISPLAY=:0`,
-        '-e', `START_HTTP=${config.START_HTTP}`,
-        '-e', `HTTP_PORT=${config.HTTP_PORT}`,
-        '-e', `HTTP_HOST_PORT=${config.HTTP_HOST_PORT}`,
-        '-e', `START_HTTPS=${config.START_HTTPS}`,
-        '-e', `HTTPS_PORT=${config.HTTPS_PORT}`,
-        '-e', `HTTPS_HOST_PORT=${config.HTTPS_HOST_PORT}`,
-        '-e', `START_SWANK=${config.START_SWANK}`,
-        '-e', `SWANK_PORT=${config.SWANK_PORT}`,
-        '-e', `SWANK_HOST_PORT=${config.SWANK_HOST_PORT}`,
-        '-p', `${config.HTTP_HOST_PORT}:${config.HTTP_PORT}`,
+	const dockerArgs = [
+            'run',
+            '-i',
+            '--rm',
+            '--name', containerName,
+	    '-v', `/tmp/.X11-unix:/tmp/.X11-unix`,
+	    '-e', `DISPLAY=:0`,
+            '-e', `START_HTTP=${config.START_HTTP}`,
+            '-e', `HTTP_PORT=${config.HTTP_PORT}`,
+            '-e', `HTTP_HOST_PORT=${config.HTTP_HOST_PORT}`,
+            '-e', `START_HTTPS=${config.START_HTTPS}`,
+            '-e', `HTTPS_PORT=${config.HTTPS_PORT}`,
+            '-e', `HTTPS_HOST_PORT=${config.HTTPS_HOST_PORT}`,
+            '-e', `START_SWANK=${config.START_SWANK}`,
+            '-e', `SWANK_PORT=${config.SWANK_PORT}`,
+            '-e', `SWANK_HOST_PORT=${config.SWANK_HOST_PORT}`,
+            '-p', `${config.HTTP_HOST_PORT}:${config.HTTP_PORT}`,
+            
+            // Conditional port mappings based on image type
+            ...(config.START_HTTPS ? ['-p', `${config.HTTPS_HOST_PORT}:${config.HTTPS_PORT}`] : []),
+            
+            // Only map SWANK port for Gendl-based images (not for Emacs-based images)
+            ...(config.START_SWANK && isGendlBasedImage(dockerImage) ? ['-p', `${config.SWANK_HOST_PORT}:${config.SWANK_PORT}`] : []),
         
-        // Conditional port mappings based on image type
-        ...(config.START_HTTPS ? ['-p', `${config.HTTPS_HOST_PORT}:${config.HTTPS_PORT}`] : []),
-        
-        // Only map SWANK port for Gendl-based images (not for Emacs-based images)
-        ...(config.START_SWANK && isGendlBasedImage(dockerImage) ? ['-p', `${config.SWANK_HOST_PORT}:${config.SWANK_PORT}`] : []),
-    
-        ...(config.START_TELNET ? ['-p', `${config.TELNET_HOST_PORT}:${config.TELNET_PORT}`] : []),
+            ...(config.START_TELNET ? ['-p', `${config.TELNET_HOST_PORT}:${config.TELNET_PORT}`] : []),
+	  
+            // Add any mount points
+            // Add ports for HTTPS and TELNET if enabled
+            ...config.ALL_MOUNTS.flatMap(mount => ['-v', mount])
+	];
       
-        // Add any mount points
-        ...config.ALL_MOUNTS.flatMap(mount => ['-v', mount])
-      ];
+	// Add the image name as the last argument
+	dockerArgs.push(dockerImage);
       
-      // Add the image name as the last argument
-      dockerArgs.push(dockerImage);
-      
-      // Log the complete docker command
-      logger.debug(`Docker command: docker ${dockerArgs.join(' ')}`);
-      
+	// Log the complete docker command
+	logger.debug(`Docker command: docker ${dockerArgs.join(' ')}`);
+	
       // Final availability check immediately before container spawning to handle race conditions
       const finalAvailabilityCheck = await checkBackendAvailability(config, logger);
       if (finalAvailabilityCheck) {
@@ -666,8 +633,5 @@ module.exports = {
   tryAttachToContainer,
   waitForBackendServer,
   startBackendContainer,
-  cleanup,
-  ensureSharedNetwork,
-  generateContainerName,
-  isGendlBasedImage
+  cleanup
 };
