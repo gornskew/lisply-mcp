@@ -96,7 +96,7 @@ try {
   const { program } = require('commander');
   const { createLogger } = require('./lib/logger');
   const { loadConfig, checkPortConflicts } = require('./lib/config');
-  const { isDockerAvailable, cleanup, startBackendContainer, tryAttachToContainer } = require('./lib/docker');
+  const { isDockerAvailable, cleanup, startBackendContainer, tryAttachToContainer, setupExitHandlers } = require('./lib/docker');
   const { checkBackendAvailability, startMcpWrapper } = require('./lib/server');
   const handlers = require('./handlers');
 
@@ -139,6 +139,9 @@ try {
 
   // Create logger
   const logger = createLogger(config);
+
+  // Set up exit handlers for container cleanup
+  setupExitHandlers(logger);
 
   // Check port conflicts
   checkPortConflicts(config);

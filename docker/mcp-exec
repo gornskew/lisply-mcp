@@ -7,6 +7,22 @@
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 MANAGE_CONTAINER="$SCRIPT_DIR/manage-container"
 
+# Track if we started the container in this session
+CONTAINER_STARTED_BY_US=false
+
+# Cleanup function
+cleanup() {
+    if [ "$CONTAINER_STARTED_BY_US" = "true" ]; then
+        echo "Cleaning up container started by this session..." >&2
+        "$MANAGE_CONTAINER" stop >&2
+    else
+        echo "Container was pre-existing, leaving it running..." >&2
+    fi
+}
+
+# Set up exit trap
+trap cleanup EXIT
+
 # Function to check if container is running
 is_container_running() {
     "$MANAGE_CONTAINER" status >/dev/null 2>&1
@@ -15,6 +31,7 @@ is_container_running() {
 # Ensure container is running
 if ! is_container_running; then
     echo "Container not running, starting it..." >&2
+    CONTAINER_STARTED_BY_US=true
     "$MANAGE_CONTAINER" start >&2
     
     # Verify it started successfully

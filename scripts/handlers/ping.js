@@ -4,6 +4,7 @@
  * Handler for ping_lisp tool
  */
 
+const { getBackendConnectionInfo } = require('../lib/server');
 const { makeHttpRequest } = require('../lib/server');
 const { sendTextResponse, sendErrorResponse } = require('../lib/utils');
 
@@ -16,9 +17,10 @@ const { sendTextResponse, sendErrorResponse } = require('../lib/utils');
 function handlePingLisp(request, config, logger) {
   logger.info('Handling ping_lisp request');
   
+  const { hostname, port } = getBackendConnectionInfo(config, logger);
   const options = {
-    hostname: config.BACKEND_HOST,
-    port: config.HTTP_HOST_PORT,
+    hostname,
+    port,
     path: config.PING_ENDPOINT,
     method: 'GET'
   };

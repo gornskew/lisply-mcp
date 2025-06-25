@@ -37,6 +37,8 @@ case "$1" in
         # Start container connected to the shared network
         docker run -d \
             --name "$CONTAINER_NAME" \
+            --label "lisply-mcp-middleware=true" \
+            --label "lisply-mcp-session=$(date +%s)-$$" \
             --hostname "mcp-backend" \
             --network "$NETWORK_NAME" \
 	    --group-add $(getent group docker | cut -d: -f3) \

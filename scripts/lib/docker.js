@@ -409,6 +409,10 @@ function isGendlBasedImage(dockerImage) {
 function startBackendContainer(config, logger, checkBackendAvailability)
 {
     return new Promise(async (resolve, reject) => {
+            // Generate unique session ID for this MCP wrapper instance
+            const sessionId = process.env.MCP_SESSION_ID || `mcp-${Date.now()}-${process.pid}`;
+            global.mcpSessionId = sessionId;
+
         try {
             if (!isDockerAvailable(logger, config.DOCKER_SOCKET)) {
                 return reject(new Error('Docker is not available'));
@@ -462,6 +466,9 @@ function startBackendContainer(config, logger, checkBackendAvailability)
                 '--name', containerName,
                 '--network', networkName,
                 '--hostname', containerHostname,
+                '--label', 'lisply-mcp-child=true',
+                '--label', `lisply-mcp-session=${sessionId}`,
+                '--label', `lisply-mcp-parent=${process.env.HOSTNAME || process.env.CONTAINER_NAME || 'lisply-mcp'}`,
                 '-v', `/tmp/.X11-unix:/tmp/.X11-unix`,
                 '-e', `DISPLAY=:0`,
                 '-e', `START_HTTP=${config.START_HTTP}`,
@@ -616,6 +623,39 @@ function startBackendContainer(config, logger, checkBackendAvailability)
  */
 async function cleanup(logger) {
   logger.info('Cleanup started'); // Log when cleanup begins
+
+  // Clean up child containers with lisply-mcp labels
+  try {
+    // Only clean up child containers if we actually started any containers ourselves
+    if (!global.dockerProcess) {
+      logger.info('No containers started by this process - skipping child cleanup');
+      return;
+    }
+    logger.info('Cleaning up child containers started by this process...');
+    // Generate the same session ID that was used when starting containers
+    const sessionId = global.mcpSessionId;
+    if (!sessionId) {
+      logger.info('No session ID found - no containers started by this process');
+      return;
+    }
+    const childContainers = await execPromise(`docker ps -q --filter "label=lisply-mcp-child=true" --filter "label=lisply-mcp-session=${sessionId}"`);
+    if (childContainers.trim()) {
+      const containerIds = childContainers.trim().split('\n');
+      logger.info(`Found ${containerIds.length} child containers to clean up`);
+      for (const containerId of containerIds) {
+        try {
+          await execPromise(`docker stop ${containerId}`);
+          logger.info(`Stopped child container: ${containerId}`);
+        } catch (stopError) {
+          logger.warn(`Failed to stop container ${containerId}: ${stopError.message}`);
+        }
+      }
+    } else {
+      logger.info('No child containers found to clean up');
+    }
+  } catch (cleanupError) {
+    logger.error(`Error during child container cleanup: ${cleanupError.message}`);
+  }
   
   // Check if we're the process that started the container or just attached to it
   if (global.dockerProcess) {
@@ -644,6 +684,23 @@ async function cleanup(logger) {
 }
 
 
+/**
+ * Set up process exit handlers to ensure cleanup
+ * @param {Object} logger - Logger instance
+ */
+function setupExitHandlers(logger) {
+  // Handle various exit scenarios
+  ['SIGINT', 'SIGTERM', 'SIGQUIT', 'exit'].forEach(signal => {
+    process.on(signal, async () => {
+      logger.info(`Received ${signal}, cleaning up...`);
+      await cleanup(logger);
+      if (signal !== 'exit') {
+        process.exit(0);
+      }
+    });
+  });
+}
+
 module.exports = {
     discoverContainerHostname,
     isDockerAvailable,
@@ -656,5 +713,6 @@ module.exports = {
     ensureSharedNetwork,
     generateContainerName,
     isGendlBasedImage,
-    getDockerSocketArgs
+    getDockerSocketArgs,
+    setupExitHandlers
 };
