@@ -1,0 +1,106 @@
+#!/bin/bash
+
+# Container management script for Lisply-MCP and other included
+# Node.js services
+
+CONTAINER_NAME="lisply-mcp"
+
+# Get branch name for image tagging (same logic as build script)
+if [ -z "${CI_COMMIT_REF_NAME}" ]; then
+    if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+        branch=$(git rev-parse --abbrev-ref HEAD)
+        branch=${branch//\/\/\--}
+    else
+        branch="latest"
+    fi
+else
+    branch=${CI_COMMIT_REF_NAME//\/\/\--}
+fi
+
+NETWORK_NAME="${LISPLY_NETWORK_NAME:-skewed-emacs-network}"
+IMAGE_NAME="gornskew/lisply-mcp:${branch}"
+PROJECT_ROOT="$(dirname "$(cd "$(dirname "${BASH_SOURCE[0]}")" && cd ../ && pwd)")"
+
+case "$1" in
+    start)
+        echo "Starting $CONTAINER_NAME container..."
+        
+        # Stop existing container if running
+        docker stop "$CONTAINER_NAME" 2>/dev/null || true
+        docker rm "$CONTAINER_NAME" 2>/dev/null || true
+        
+        # Create network if it doesn't exist
+        docker network create "$NETWORK_NAME" 2>/dev/null || true
+
+	echo "Mounting ${PROJECT_ROOT} to /projects in container."
+	
+        # Start container connected to the shared network
+        docker run -d \
+            --name "$CONTAINER_NAME" \
+            --hostname "mcp-backend" \
+            --network "$NETWORK_NAME" \
+	    --group-add $(getent group docker | cut -d: -f3) \
+	    -v /var/run/docker.sock:/var/run/docker.sock \
+            --mount "type=bind,source=$PROJECT_ROOT,target=/projects" \
+            "$IMAGE_NAME"
+        
+        echo "Container started. Waiting for it to be ready..."
+        sleep 2
+        
+        # Check if container is running
+        if docker ps --filter "name=$CONTAINER_NAME" --format "table {{.Names}}" | grep -q "$CONTAINER_NAME"; then
+            echo "[OK] Container $CONTAINER_NAME is running"
+            echo ""
+            echo "Available services:"
+            echo "  * Lisply-MCP server (via mcp-exec)"
+            echo "  * Network: $NETWORK_NAME"
+            echo "  * Hostname: mcp-backend"
+            echo "  * Can connect to: emacs-backend:7080, gendl-backend:9080"
+            echo "  * Node.js development tools available"
+        else
+            echo "[ERROR] Failed to start container"
+            exit 1
+        fi
+        ;;
+        
+    stop)
+        echo "Stopping $CONTAINER_NAME container..."
+        docker stop "$CONTAINER_NAME" 2>/dev/null || true
+        docker rm "$CONTAINER_NAME" 2>/dev/null || true
+        echo "Container stopped"
+        ;;
+        
+    status)
+        if docker ps --filter "name=$CONTAINER_NAME" --format "table {{.Names}}" | grep -q "$CONTAINER_NAME"; then
+            echo "[OK] Container $CONTAINER_NAME is running"
+            echo ""
+            echo "Container info:"
+            docker ps --filter "name=$CONTAINER_NAME" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+        else
+            echo "[ERROR] Container $CONTAINER_NAME is not running"
+            exit 1
+        fi
+        ;;
+        
+    restart)
+        "$0" stop
+        "$0" start
+        ;;
+        
+    exec)
+        shift  # Remove 'exec' from arguments
+        docker exec -i "$CONTAINER_NAME" "$@"
+        ;;
+        
+    *)
+        echo "Usage: $0 {start|stop|status|restart|exec <command>}"
+        echo ""
+        echo "Examples:"
+        echo "  $0 start                           # Start the container"
+        echo "  $0 exec node --version             # Run node command"
+        echo "  $0 exec node ./scripts/mcp-wrapper.js --help"
+        echo "  $0 exec copilot-language-server --stdio --port 9001"
+        echo "  $0 exec claude-code --help"
+        exit 1
+        ;;
+esac

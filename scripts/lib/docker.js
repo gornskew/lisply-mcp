@@ -95,14 +95,14 @@ async function ensureDockerLogin(logger) {
 
 /**
  * Determine if a Docker image needs implementation suffix
- * @param {string} baseName - Base image name (e.g., "genworks/gendl", "genworks/skewed-emacs")
+ * @param {string} baseName - Base image name (e.g., "genworks/gendl", "gornskew/skewed-emacs")
  * @param {string} impl - Implementation name
  * @returns {boolean} - Whether to append implementation suffix
  */
 function shouldAppendImplementation(baseName, impl) {
   // List of image bases that don't need implementation suffixes
   const NO_IMPL_SUFFIX = [
-    'genworks/skewed-emacs',
+    'gornskew/skewed-emacs',
     'skewed-emacs'
   ];
   
@@ -176,7 +176,8 @@ function execPromise(command) {
  * Ensure a shared Docker network exists for lisply-mcp containers
  */
 async function ensureSharedNetwork(logger) {
-  const networkName = 'lisply-mcp-network';
+  // Use configurable network name with sensible default for interoperability
+  const networkName = process.env.LISPLY_NETWORK_NAME || 'skewed-emacs-network';
   try {
     await execPromise(`docker network inspect ${networkName}`);
     logger.debug(`Shared network ${networkName} already exists`);
@@ -283,87 +284,41 @@ async function pullLatestBackendImage(config, logger) {
  * @param {Object} logger - Logger instance
  * @returns {boolean} - Whether attachment was successful
  */
-function tryAttachToContainer(config, logger) {
+/**
+ * Discover the hostname of an existing container by inspecting it
+ * @param {string} containerIdOrName - Container ID or name
+ * @param {Object} logger - Logger instance
+ * @returns {string|null} - The hostname of the container, or null if not found
+ */
+function discoverContainerHostname(containerIdOrName, logger) {
   try {
-    logger.info('Attempting to find and attach to existing backend container');
+    // Use docker inspect to get the hostname
+    const inspectCommand = `docker inspect --format '{{.Config.Hostname}}' ${containerIdOrName}`;
+    const hostname = execSync(inspectCommand, { encoding: 'utf8' }).trim();
     
-    // Find containers using our expected ports
-    const command = `docker ps --filter "publish=${config.HTTP_HOST_PORT}" --format "{{.ID}}:{{.Names}}"`;
-    const result = execSync(command, { encoding: 'utf8' }).trim();
-    
-    if (!result) {
-      logger.info('No running containers found with matching port');
-      return false;
+    if (hostname && hostname !== 'null') {
+      logger.info(`Discovered hostname '${hostname}' for existing container ${containerIdOrName}`);
+      return hostname;
     }
     
-    // Parse container info
-    const containers = result.split('\n').map(line => {
-      const [id, name] = line.split(':');
-      return { id, name };
-    });
+    // Fallback: Try to derive from container name or image
+    const networkCommand = `docker inspect --format '{{range .NetworkSettings.Networks}}{{.Aliases}}{{end}}' ${containerIdOrName}`;
+    const aliases = execSync(networkCommand, { encoding: 'utf8' }).trim();
     
-    logger.info(`Found ${containers.length} potential containers: ${JSON.stringify(containers)}`);
-    
-    if (containers.length === 0) {
-      return false;
+    if (aliases && aliases.includes('backend')) {
+      logger.info(`Using network alias from existing container: ${aliases}`);
+      return aliases.split(',')[0]; // Take first alias
     }
     
-    // Choose the first container
-    const container = containers[0];
-    global.backendContainerName = container.name;
-    
-    logger.info(`Connecting to container ${container.id} (${container.name})`);
-    
-    // Try using 'exec' instead of 'attach' for better stability
-    // The -i flag keeps stdin open
-    const dockerProcess = spawn('docker', ['exec', '-i', container.id, 'ccl', '--no-init', '--quiet'], {
-      stdio: ['pipe', 'pipe', 'pipe'] // Keep stdin open with pipe
-    });
-    
-    // Add explicit exit handler to log when the process exits
-    dockerProcess.on('exit', (code, signal) => {
-      logger.error(`Docker exec process exited with code ${code} and signal ${signal}`);
-      global.dockerProcess = null;
-    });
-    
-    // Handle potential errors
-    dockerProcess.on('error', (error) => {
-      logger.error(`Error executing in container: ${error.message}`);
-      return false;
-    });
-    
-    // Store the process globally
-    global.dockerProcess = dockerProcess;
-    
-    // Setup event handlers for the process
-    dockerProcess.stdout.on('data', (data) => {
-      const output = data.toString();
-      logger.debug(`Container stdout: ${output.substring(0, 100)}${output.length > 100 ? '...' : ''}`);
-    });
-    
-    dockerProcess.stderr.on('data', (data) => {
-      logger.error(`Container stderr: ${data.toString().trim()}`);
-    });
-    
-    // Send a newline to check if the container is responsive
-    dockerProcess.stdin.write('\n');
-    
-    logger.info('Successfully started Lisp REPL in container');
-    return true;
+    logger.warn(`Could not discover hostname for container ${containerIdOrName}`);
+    return null;
   } catch (error) {
-    logger.error(`Failed to connect to container: ${error.message}`);
-    return false;
+    logger.error(`Failed to discover hostname for container ${containerIdOrName}: ${error.message}`);
+    return null;
   }
 }
 
-/**
- * Wait for the backend server to become available
- * @param {Object} config - Configuration object
- * @param {Object} logger - Logger instance
- * @param {Function} checkBackendAvailability - Function to check backend availability
- * @param {number} maxWaitSeconds - Maximum wait time in seconds
- * @returns {Promise<boolean>} - Whether the backend server became available
- */
+
 function waitForBackendServer(config, logger, checkBackendAvailability, maxWaitSeconds) {
   return new Promise((resolve, reject) => {
     logger.info(`Waiting up to ${maxWaitSeconds} seconds for backend server to become available`);
@@ -429,32 +384,33 @@ function isGendlBasedImage(dockerImage) {
  * @param {Function} checkBackendAvailability - Function to check backend availability
  * @returns {Promise<boolean>} - Whether the container was started successfully
  */
-function startBackendContainer(config, logger, checkBackendAvailability) {
-  return new Promise(async (resolve, reject) => {
-    try {
-      if (!isDockerAvailable(logger, config.DOCKER_SOCKET)) {
-        return reject(new Error('Docker is not available'));
-      }
+function startBackendContainer(config, logger, checkBackendAvailability)
+{
+    return new Promise(async (resolve, reject) => {
+        try {
+            if (!isDockerAvailable(logger, config.DOCKER_SOCKET)) {
+                return reject(new Error('Docker is not available'));
+            }
 
-      const loginStatus = await ensureDockerLogin(logger);
-      if (loginStatus) {
-        logger.info('Docker login confirmed, proceeding with image pull');
-      } else {
-        logger.warn('Docker login not confirmed, will try to use local images');
-      }
+            const loginStatus = await ensureDockerLogin(logger);
+            if (loginStatus) {
+                logger.info('Docker login confirmed, proceeding with image pull');
+            } else {
+                logger.warn('Docker login not confirmed, will try to use local images');
+            }
 
-      const pullResult = await pullLatestBackendImage(config, logger);
-      if (!pullResult || !pullResult.success) {
-        logger.warn('Could not pull or find a suitable backend image');
-        return reject(new Error('No suitable backend image available'));
-      }
+            const pullResult = await pullLatestBackendImage(config, logger);
+            if (!pullResult || !pullResult.success) {
+                logger.warn('Could not pull or find a suitable backend image');
+                return reject(new Error('No suitable backend image available'));
+            }
 
-      const dockerImage = pullResult.image;
-      logger.info(`Preparing to start backend container using image ${dockerImage}`);
+            const dockerImage = pullResult.image;
+            logger.info(`Preparing to start backend container using image ${dockerImage}`);
 
-      // in debug mode, log the following `-e` environment variables
-      // so we can see what's going on when docker container starts:
-      logger.debug(`Environment variables at container start:
+            // in debug mode, log the following `-e` environment variables
+            // so we can see what's going on when docker container starts:
+            logger.debug(`Environment variables at container start:
       START_HTTP: ${config.START_HTTP}
       HTTP_PORT: ${config.HTTP_PORT}
       HTTP_HOST_PORT: ${config.HTTP_HOST_PORT}
@@ -468,160 +424,164 @@ function startBackendContainer(config, logger, checkBackendAvailability) {
       TELNET_PORT: ${config.TELNET_PORT}
       TELNET_HOST_PORT: ${config.TELNET_HOST_PORT}
       `);
-      
-      // Ensure shared network exists and generate meaningful container name
-      const networkName = await ensureSharedNetwork(logger);
-      const containerName = generateContainerName(dockerImage, config.SERVER_NAME);
-      
-      // Prepare docker arguments for spawn
-      const dockerArgs = [
-        'run',
-        '-i',
-        '--rm',
-        '--name', containerName,
-        '--network', networkName,
-        '--hostname', isGendlBasedImage(dockerImage) ? 'gendl-backend' : 'emacs-backend',
-        '-v', `/tmp/.X11-unix:/tmp/.X11-unix`,
-        '-e', `DISPLAY=:0`,
-        '-e', `START_HTTP=${config.START_HTTP}`,
-        '-e', `HTTP_PORT=${config.HTTP_PORT}`,
-        '-e', `HTTP_HOST_PORT=${config.HTTP_HOST_PORT}`,
-        '-e', `START_HTTPS=${config.START_HTTPS}`,
-        '-e', `HTTPS_PORT=${config.HTTPS_PORT}`,
-        '-e', `HTTPS_HOST_PORT=${config.HTTPS_HOST_PORT}`,
-        '-e', `START_SWANK=${config.START_SWANK}`,
-        '-e', `SWANK_PORT=${config.SWANK_PORT}`,
-        '-e', `SWANK_HOST_PORT=${config.SWANK_HOST_PORT}`,
-        '-p', `${config.HTTP_HOST_PORT}:${config.HTTP_PORT}`,
-        
-        // Conditional port mappings based on image type
-        ...(config.START_HTTPS ? ['-p', `${config.HTTPS_HOST_PORT}:${config.HTTPS_PORT}`] : []),
-        
-        // Only map SWANK port for Gendl-based images (not for Emacs-based images)
-        ...(config.START_SWANK && isGendlBasedImage(dockerImage) ? ['-p', `${config.SWANK_HOST_PORT}:${config.SWANK_PORT}`] : []),
-    
-        ...(config.START_TELNET ? ['-p', `${config.TELNET_HOST_PORT}:${config.TELNET_PORT}`] : []),
-      
-        // Add any mount points
-        ...config.ALL_MOUNTS.flatMap(mount => ['-v', mount])
-      ];
-      
-      // Add the image name as the last argument
-      dockerArgs.push(dockerImage);
-      
-      // Log the complete docker command
-      logger.debug(`Docker command: docker ${dockerArgs.join(' ')}`);
-      
-      // Final availability check immediately before container spawning to handle race conditions
-      const finalAvailabilityCheck = await checkBackendAvailability(config, logger);
-      if (finalAvailabilityCheck) {
-        logger.info('Backend service became available during final check. Skipping container start.');
-        return resolve(true);
-      }
-      
-      // Use spawn instead of exec to keep stdin open
-      const dockerProcess = spawn('docker', dockerArgs, {
-        stdio: ['pipe', 'pipe', 'pipe'] // Keep stdin open with pipe
-      });
-      
-      // Store the container name and log container output
-      global.backendContainerName = containerName;
-      logger.info(`Started backend container with name: ${containerName}`);
-      
-      // Just log the container output
-      dockerProcess.stdout.on('data', (data) => {
-        const output = data.toString().trim();
-        logger.debug(`Docker stdout: ${output}`);
-      });
-      
-      // Log stderr
-      dockerProcess.stderr.on('data', (data) => {
-        const errorMsg = data.toString().trim();
-        logger.error(`Docker stderr: ${errorMsg}`);
-        
-        // Check for port already in use
-        if (errorMsg.includes('port is already allocated')) {
-          logger.warn('Port already in use. Another process likely started the container before we could.');
-          dockerProcess.kill(); // Kill the process
-          return resolve(true);
-        }
-      });
-      
-      // Handle process exit
-      dockerProcess.on('exit', (code, signal) => {
-        if (code !== 0) {
-          logger.error(`Docker process exited with code ${code} and signal ${signal}`);
-          return reject(new Error(`Docker process exited with code ${code}`));
-        }
-      });
-      
-      // Handle process errors
-      dockerProcess.on('error', (error) => {
-        logger.error(`Failed to start Docker container: ${error.message}`);
-        return reject(error);
-      });
-      
-      // Keep the stdin pipe open (critical to prevent container from exiting)
-      dockerProcess.stdin.on('error', (error) => {
-        logger.error(`Docker stdin error: ${error.message}`);
-      });
-      
-      // Store the process globally so it stays alive with the script
-      global.dockerProcess = dockerProcess;
-      
-      // Add explicit exit handler to log when the process exits
-      dockerProcess.on('exit', (code, signal) => {
-        logger.error(`Docker container process exited with code ${code} and signal ${signal}`);
-        global.dockerProcess = null;
-      });
-      
-      // Wait briefly for the container to start before continuing
-      setTimeout(() => {
-        // Check if the container is running using the container name
-        exec(`docker ps --filter "name=${containerName}" --format "{{.ID}}"`, (error, stdout, stderr) => {
-          if (error) {
-            logger.error(`Error checking container status: ${error.message}`);
-            return reject(error);
-          }
-          
-          if (stdout.trim()) {
-            // Container is running, wait for the server to become available
-            logger.info(`Container ${containerName} is running, waiting for backend server to start`);
-            waitForBackendServer(config, logger, checkBackendAvailability, 30)
-              .then(() => resolve(true))
-              .catch(error => reject(error));
-          } else {
-            // Container may still be starting, wait a bit more
-            logger.info('Container not found in ps output yet, waiting more time for startup');
-            setTimeout(() => {
-              exec(`docker ps --filter "name=${containerName}" --format "{{.ID}}"`, (error, stdout, stderr) => {
-                if (error) {
-                  logger.error(`Error checking container status: ${error.message}`);
-                  return reject(error);
-                }
+            
+            // Ensure shared network exists and generate meaningful container name
+            const networkName = await ensureSharedNetwork(logger);
+            const containerName = generateContainerName(dockerImage, config.SERVER_NAME);
+            
+            // Determine and store hostname when creating the container
+            const containerHostname = global.backendHostname; 
+            
+            // Prepare docker arguments for spawn
+            const dockerArgs = [
+                'run',
+                '-i',
+                '--rm',
+                '--name', containerName,
+                '--network', networkName,
+                '--hostname', containerHostname,
+                '-v', `/tmp/.X11-unix:/tmp/.X11-unix`,
+                '-e', `DISPLAY=:0`,
+                '-e', `START_HTTP=${config.START_HTTP}`,
+                '-e', `HTTP_PORT=${config.HTTP_PORT}`,
+                '-e', `HTTP_HOST_PORT=${config.HTTP_HOST_PORT}`,
+                '-e', `START_HTTPS=${config.START_HTTPS}`,
+                '-e', `HTTPS_PORT=${config.HTTPS_PORT}`,
+                '-e', `HTTPS_HOST_PORT=${config.HTTPS_HOST_PORT}`,
+                '-e', `START_SWANK=${config.START_SWANK}`,
+                '-e', `SWANK_PORT=${config.SWANK_PORT}`,
+                '-e', `SWANK_HOST_PORT=${config.SWANK_HOST_PORT}`,
+                '-p', `${config.HTTP_HOST_PORT}:${config.HTTP_PORT}`,
                 
-                if (stdout.trim()) {
-                  logger.info(`Container ${containerName} is now running, waiting for backend server to start`);
-                  waitForBackendServer(config, logger, checkBackendAvailability, 30)
-                    .then(() => resolve(true))
-                    .catch(error => reject(error));
-                } else {
-                  logger.warn(`Container ${containerName} not found after extended wait`);
-                  // Try to continue anyway - the container might still be starting
-                  waitForBackendServer(config, logger, checkBackendAvailability, 30)
-                    .then(() => resolve(true))
-                    .catch(error => reject(error));
+                // Conditional port mappings based on image type
+                ...(config.START_HTTPS ? ['-p', `${config.HTTPS_HOST_PORT}:${config.HTTPS_PORT}`] : []),
+                
+                // Only map SWANK port for Gendl-based images (not for Emacs-based images)
+                ...(config.START_SWANK && isGendlBasedImage(dockerImage) ? ['-p', `${config.SWANK_HOST_PORT}:${config.SWANK_PORT}`] : []),
+                
+                ...(config.START_TELNET ? ['-p', `${config.TELNET_HOST_PORT}:${config.TELNET_PORT}`] : []),
+                
+                // Add any mount points
+                ...config.ALL_MOUNTS.flatMap(mount => ['-v', mount])
+            ];
+            
+            // Add the image name as the last argument
+            dockerArgs.push(dockerImage);
+            
+            // Log the complete docker command
+            logger.debug(`Docker command: docker ${dockerArgs.join(' ')}`);
+            
+            // Final availability check immediately before container spawning to handle race conditions
+            const finalAvailabilityCheck = await checkBackendAvailability(config, logger);
+            if (finalAvailabilityCheck) {
+                logger.info('Backend service became available during final check. Skipping container start.');
+                return resolve(true);
+            }
+            
+            // Use spawn instead of exec to keep stdin open
+            const dockerProcess = spawn('docker', dockerArgs, {
+                stdio: ['pipe', 'pipe', 'pipe'] // Keep stdin open with pipe
+            });
+            
+            // Store the container name and log container output
+            global.backendContainerName = containerName;
+
+            logger.info(`Started backend container with name: ${containerName}`);
+            
+            // Just log the container output
+            dockerProcess.stdout.on('data', (data) => {
+                const output = data.toString().trim();
+                logger.debug(`Docker stdout: ${output}`);
+            });
+            
+            // Log stderr
+            dockerProcess.stderr.on('data', (data) => {
+                const errorMsg = data.toString().trim();
+                logger.error(`Docker stderr: ${errorMsg}`);
+                
+                // Check for port already in use
+                if (errorMsg.includes('port is already allocated')) {
+                    logger.warn('Port already in use. Another process likely started the container before we could.');
+                    dockerProcess.kill(); // Kill the process
+                    return resolve(true);
                 }
-              });
-            }, 2000);
-          }
-        });
-      }, 1000);
-    } catch (error) {
-      logger.error(`Container startup error: ${error.message}`);
-      reject(error);
-    }
-  });
+            });
+            
+            // Handle process exit
+            dockerProcess.on('exit', (code, signal) => {
+                if (code !== 0) {
+                    logger.error(`Docker process exited with code ${code} and signal ${signal}`);
+                    return reject(new Error(`Docker process exited with code ${code}`));
+                }
+            });
+            
+            // Handle process errors
+            dockerProcess.on('error', (error) => {
+                logger.error(`Failed to start Docker container: ${error.message}`);
+                return reject(error);
+            });
+            
+            // Keep the stdin pipe open (critical to prevent container from exiting)
+            dockerProcess.stdin.on('error', (error) => {
+                logger.error(`Docker stdin error: ${error.message}`);
+            });
+            
+            // Store the process globally so it stays alive with the script
+            global.dockerProcess = dockerProcess;
+            
+            // Add explicit exit handler to log when the process exits
+            dockerProcess.on('exit', (code, signal) => {
+                logger.error(`Docker container process exited with code ${code} and signal ${signal}`);
+                global.dockerProcess = null;
+            });
+            
+            // Wait briefly for the container to start before continuing
+            setTimeout(() => {
+                // Check if the container is running using the container name
+                exec(`docker ps --filter "name=${containerName}" --format "{{.ID}}"`, (error, stdout, stderr) => {
+                    if (error) {
+                        logger.error(`Error checking container status: ${error.message}`);
+                        return reject(error);
+                    }
+                    
+                    if (stdout.trim()) {
+                        // Container is running, wait for the server to become available
+                        logger.info(`Container ${containerName} is running, waiting for backend server to start`);
+                        waitForBackendServer(config, logger, checkBackendAvailability, 30)
+                            .then(() => resolve(true))
+                            .catch(error => reject(error));
+                    } else {
+                        // Container may still be starting, wait a bit more
+                        logger.info('Container not found in ps output yet, waiting more time for startup');
+                        setTimeout(() => {
+                            exec(`docker ps --filter "name=${containerName}" --format "{{.ID}}"`, (error, stdout, stderr) => {
+                                if (error) {
+                                    logger.error(`Error checking container status: ${error.message}`);
+                                    return reject(error);
+                                }
+                                
+                                if (stdout.trim()) {
+                                    logger.info(`Container ${containerName} is now running, waiting for backend server to start`);
+                                    waitForBackendServer(config, logger, checkBackendAvailability, 30)
+                                        .then(() => resolve(true))
+                                        .catch(error => reject(error));
+                                } else {
+                                    logger.warn(`Container ${containerName} not found after extended wait`);
+                                    // Try to continue anyway - the container might still be starting
+                                    waitForBackendServer(config, logger, checkBackendAvailability, 30)
+                                        .then(() => resolve(true))
+                                        .catch(error => reject(error));
+                                }
+                            });
+                        }, 2000);
+                    }
+                });
+            }, 1000);
+        } catch (error) {
+            logger.error(`Container startup error: ${error.message}`);
+            reject(error);
+        }
+    });
 }
 
 /**
@@ -658,16 +618,17 @@ async function cleanup(logger) {
   logger.info('Cleanup completed'); // Log when cleanup finishes
 }
 
+
 module.exports = {
-  isDockerAvailable,
-  ensureDockerLogin,
-  constructDockerImageName,
-  pullLatestBackendImage,
-  tryAttachToContainer,
-  waitForBackendServer,
-  startBackendContainer,
-  cleanup,
-  ensureSharedNetwork,
-  generateContainerName,
-  isGendlBasedImage
+    discoverContainerHostname,
+    isDockerAvailable,
+    ensureDockerLogin,
+    constructDockerImageName,
+    pullLatestBackendImage,
+    waitForBackendServer,
+    startBackendContainer,
+    cleanup,
+    ensureSharedNetwork,
+    generateContainerName,
+    isGendlBasedImage
 };

@@ -1,39 +1,49 @@
-# Lisply-MCP Emacs Development Container
-# Based on skewed-emacs but optimized for lisply-mcp development
+# Node.js service container for MCP, Copilot, and Claude Code
+FROM node:20-slim
 
-FROM genworks/skewed-emacs:devo
+# Set working directory inside the container
+WORKDIR /app
 
-# Switch back to root to install additional packages if needed
-USER root
-
-# Install any additional development tools for lisply-mcp
+# Install system dependencies including Docker CLI
 RUN apt-get update && apt-get install -y \
-    nodejs \
-    npm \
-    jq \
-    && rm -rf /var/cache/apt/* && apt-get clean
+    git \
+    curl \
+    procps \
+    && rm -rf /var/lib/apt/lists/*
 
-# Create a specific workspace for lisply-mcp
-RUN mkdir -p /workspace/lisply-mcp && \
-    chown emacs-user:emacs-user /workspace/lisply-mcp
+RUN curl -fsSL https://download.docker.com/linux/static/stable/x86_64/docker-24.0.7.tgz | tar xz --strip-components=1 -C /usr/local/bin docker/docker \
+    && chmod +x /usr/local/bin/docker
 
-# Switch back to emacs-user
-USER emacs-user
-WORKDIR /workspace/lisply-mcp
+# Add node user to docker group for Docker socket access
+# RUN usermod -aG docker node
 
-# Copy lisply-mcp project files
-COPY --chown=emacs-user:emacs-user . /workspace/lisply-mcp/
+# Maybe need this later: Fix git safe directory globally
+# RUN git config --global --add safe.directory '*'
 
-# Set up environment for lisply-mcp development
-ENV LISPLY_MCP_ROOT=/workspace/lisply-mcp
-ENV PROJECTS_ROOT=/projects
+# Copy package.json and package-lock.json if they exist
+COPY package*.json ./
 
-# Create a custom startup script for lisply-mcp development
-COPY --chown=emacs-user:emacs-user docker/startup-lisply-mcp.sh /home/emacs-user/startup-lisply-mcp.sh
-RUN chmod +x /home/emacs-user/startup-lisply-mcp.sh
+# Install Node dependencies including language servers and tools
+RUN npm install -g \
+    @anthropic-ai/claude-code \
+    @github/copilot-language-server
 
-# Expose ports for both Emacs HTTP API and any Node.js services
-EXPOSE 7080 3000 8080
+# Install any local dependencies
+RUN npm install || true
 
-# Use the lisply-mcp specific startup script
-ENTRYPOINT ["/home/emacs-user/startup-lisply-mcp.sh"]
+# Copy the entire project (scripts, config, etc.)
+COPY . .
+
+# Make the wrapper script executable
+RUN chmod +x ./scripts/mcp-wrapper.js
+
+# Run mcp-wrapper.js --help once, to fetch dependencies.
+RUN ./scripts/mcp-wrapper.js --help
+
+# Expose ports for language servers and other services
+EXPOSE 3000 8080 9001
+
+USER node
+
+# Keep the container running in background - simple sleep loop
+CMD ["tail", "-f", "/dev/null"]

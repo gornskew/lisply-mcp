@@ -8,54 +8,89 @@ const http = require('http');
 const readline = require('readline');
 
 /**
+ * Determine the correct hostname and port for HTTP requests
+ * @param {Object} config - Configuration object
+ * @param {Object} logger - Logger instance
+ * @returns {Object} - Object with hostname and port to use
+ */
+function getBackendConnectionInfo(config, logger) {
+    // Default to config values
+    let hostname = global.backendHostname;
+    let port = config.HTTP_PORT;
+  
+    // Check if we have a stored backend hostname from container creation
+    logger.debug(`Found global.backendHostname: ${global.backendHostname}`);
+    
+    // If the backend hostname is localhost/127.0.0.1, use host port
+    const isLocalhost = global.backendHostname === 'localhost' || 
+          global.backendHostname === '127.0.0.1';
+    
+    if (isLocalhost) {
+	// Use localhost and host port for local connections
+	port = config.HTTP_HOST_PORT;
+	logger.debug(`Using localhost connection: ${hostname}:${port}`);
+    } else {
+      // Use container hostname and internal port for container-to-container
+      logger.debug(`Using host connection: ${hostname}:${port}`);
+    }
+
+    return { hostname, port };
+}
+
+
+
+/**
  * Check if the backend server is available
  * @param {Object} config - Configuration object
  * @param {Object} logger - Logger instance
  * @returns {Promise<boolean>} - Whether the backend is available
  */
 function checkBackendAvailability(config, logger) {
-  return new Promise((resolve) => {
-    logger.info(`Checking backend HTTP service availability at ${config.BACKEND_HOST}:${config.HTTP_HOST_PORT}`);
-    
-    const options = {
-      hostname: config.BACKEND_HOST,
-      port: config.HTTP_HOST_PORT,
-      path: config.PING_ENDPOINT,
-      method: 'GET',
-      timeout: 5000
-    };
+    return new Promise((resolve) => {
+        
+  global.backendHostname = determineContainerHostname(config, logger);
+	const { hostname, port } = getBackendConnectionInfo(config,logger);
+	logger.info(`Checking backend HTTP service availability at ${hostname}:${port}`);
+	
+	const options = {
+	    hostname,
+	    port,
+	    path: config.PING_ENDPOINT,
+	    method: 'GET',
+	    timeout: 5000
+	};
 
-    const req = http.request(options, (res) => {
-      let responseBody = '';
+	const req = http.request(options, (res) => {
+	    let responseBody = '';
 
-      res.on('data', (chunk) => {
-        responseBody += chunk;
-      });
+	    res.on('data', (chunk) => {
+		responseBody += chunk;
+	    });
 
-      res.on('end', () => {
-        if (res.statusCode === 200 && responseBody.length > 0) {
-          logger.info(`Lisply service is available. Ping response: ${responseBody}`);
-          resolve(true);
-        } else {
-          logger.warn(`Lisply service ping failed. Status: ${res.statusCode}, Response length: ${responseBody.length}`);
-          resolve(false);
-        }
-      });
+	    res.on('end', () => {
+		if (res.statusCode === 200 && responseBody.length > 0) {
+		    logger.info(`Lisply service is available. Ping response: ${responseBody}`);
+		    resolve(true);
+		} else {
+		    logger.warn(`Lisply service ping failed. Status: ${res.statusCode}, Response length: ${responseBody.length}`);
+		    resolve(false);
+		}
+	    });
+	});
+
+	req.on('timeout', () => {
+	    logger.warn('Lisply service ping request timed out');
+	    req.destroy();
+	    resolve(false);
+	});
+
+	req.on('error', (error) => {
+	    logger.warn(`Lisply service ping request error: ${error.message}`);
+	    resolve(false);
+	});
+
+	req.end();
     });
-
-    req.on('timeout', () => {
-      logger.warn('Lisply service ping request timed out');
-      req.destroy();
-      resolve(false);
-    });
-
-    req.on('error', (error) => {
-      logger.warn(`Lisply service ping request error: ${error.message}`);
-      resolve(false);
-    });
-
-    req.end();
-  });
 }
 
 /**
@@ -267,9 +302,34 @@ function startMcpWrapper(config, logger, handlers) {
   return rl;
 }
 
+/**
+ * Determine the hostname to use for the container
+ * @param {Object} config - Configuration object
+ * @param {Object} logger - Logger instance
+ * @returns {string} - Hostname to use for the container
+ */
+function determineContainerHostname(config, logger) {
+    // First check if BACKEND_HOST is explicitly set and not localhost/127.0.0.1
+    if (config.BACKEND_HOST && 
+  config.BACKEND_HOST !== '127.0.0.1' && 
+  config.BACKEND_HOST !== 'localhost') {
+  logger.info(`Using explicit BACKEND_HOST as container hostname: ${config.BACKEND_HOST}`);
+  return config.BACKEND_HOST;
+    }
+    
+    // Fall back to ipv4 localhost if no backend-host given
+    const defaultHostname = '127.0.0.1';
+    logger.info(`Using default hostname for container: ${defaultHostname}`);
+    return defaultHostname;
+}
+
+
+
 module.exports = {
-  checkBackendAvailability,
-  makeHttpRequest,
-  setupProcessEvents,
-  startMcpWrapper
+    checkBackendAvailability,
+    getBackendConnectionInfo,
+    makeHttpRequest,
+    setupProcessEvents,
+    startMcpWrapper,
+    determineContainerHostname
 };

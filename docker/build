@@ -1,0 +1,102 @@
+#!/bin/bash
+
+# Build script for lisply-mcp container image
+
+set -e  # Exit on any error
+
+# Get the script's directory and set up paths
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+
+
+# Get branch name for tagging (compatible with lisply-mcp expectations)
+if [ -z "${CI_COMMIT_REF_NAME}" ]; then
+    # Try to get branch from git
+    if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+        branch=$(git rev-parse --abbrev-ref HEAD)
+        # Replace forward slashes with double hyphens for docker tag compatibility
+        branch=${branch//\/\/\/--}
+    else
+        branch="master"
+    fi
+else
+    branch=${CI_COMMIT_REF_NAME//\/\/\/--}
+fi
+
+DOCKER_USERNAME="${DOCKER_USERNAME:-gornskew}"
+
+# Docker Hub login (optional - for CI/automated builds)
+if [ -n "${DOCKER_USERNAME}" ] && [ -n "${DOCKER_PASSWORD}" ]; then
+    echo "Logging into Docker Hub with user ${DOCKER_USERNAME} and with password..."
+    echo "${DOCKER_PASSWORD}" | docker login -u "${DOCKER_USERNAME}" --password-stdin
+else 
+    echo "Logging into Docker Hub with existing credentials..."
+    docker login
+fi
+
+# Configuration
+IMAGE_NAME="${DOCKER_USERNAME}/lisply-mcp"
+TAG=${branch}
+DOCKERFILE_PATH="$SCRIPT_DIR/Dockerfile"
+BUILD_CONTEXT="$PROJECT_ROOT"
+
+echo "Building Docker image: ${IMAGE_NAME}:${TAG}"
+echo "Script directory: $SCRIPT_DIR"
+echo "Project root: $PROJECT_ROOT"
+echo "Build context: $BUILD_CONTEXT"
+
+# Check if Dockerfile exists
+if [ ! -f "$DOCKERFILE_PATH" ]; then
+    echo "Error: Dockerfile not found at $DOCKERFILE_PATH"
+    exit 1
+fi
+
+# Check if scripts directory exists in project root
+if [ ! -d "$PROJECT_ROOT/scripts" ]; then
+    echo "Error: scripts directory not found at $PROJECT_ROOT/scripts"
+    exit 1
+fi
+
+# Check if mcp-wrapper.js exists
+if [ ! -f "$PROJECT_ROOT/scripts/mcp-wrapper.js" ]; then
+    echo "Error: mcp-wrapper.js not found at $PROJECT_ROOT/scripts/mcp-wrapper.js"
+    exit 1
+fi
+
+# Build the Docker image
+docker build \
+    -f "$DOCKERFILE_PATH" \
+    -t "${IMAGE_NAME}:${TAG}" \
+    "$BUILD_CONTEXT"
+
+
+# Push to Docker Hub (if login credentials are available)
+echo "Pushing image to Docker Hub..."
+if docker push "${IMAGE_NAME}:${TAG}"; then
+    echo "Successfully pushed ${IMAGE_NAME}:${TAG} to Docker Hub"
+    
+    # Also tag and push as 'latest' if this is the main/master branch
+    if [[ "$branch" == "main" || "$branch" == "master" || "$branch" == "devo" ]]; then
+        echo "Tagging and pushing as latest..."
+        docker tag "${IMAGE_NAME}:${TAG}" "${IMAGE_NAME}:latest"
+        if docker push "${IMAGE_NAME}:latest"; then
+            echo "Successfully pushed ${IMAGE_NAME}:latest to Docker Hub"
+        else
+            echo "Warning: Failed to push ${IMAGE_NAME}:latest"
+        fi
+    fi
+else
+    echo "Warning: Failed to push ${IMAGE_NAME}:${TAG} to Docker Hub"
+    echo "Make sure you're logged in with: docker login"
+    echo "Or set DOCKER_USERNAME and DOCKER_PASSWORD environment variables"
+fi
+
+echo "Build completed successfully!"
+echo ""
+echo "Node.js services container ready!"
+echo ""
+echo "Available services:"
+echo "  * MCP servers (mcp-wrapper.js)"
+echo "  * Node.js development tools"
+echo ""
+echo "Start with: ./manage-container start"

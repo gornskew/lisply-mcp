@@ -289,29 +289,9 @@ function sanitizeDockerTag(input) {
  * @returns {string|null} - Detected server name or null if not found
  */
 function detectServerNameFromEnvironment() {
+  // FLAG -- change this to use backendHost if available. 
   // Check if we're running under a process manager that might set useful env vars
   // MCP servers often get launched with specific environment context
-  
-  // Try to detect from common environment variables that might indicate the server purpose
-  const envHints = [
-    process.env.MCP_SERVER_NAME,
-    process.env.LISPLY_SERVER_TYPE,
-    process.env.SERVER_TYPE,
-    process.env.BACKEND_TYPE
-  ];
-  
-  for (const hint of envHints) {
-    if (hint && hint.trim()) {
-      return hint.trim();
-    }
-  }
-  
-  // Try to detect from command line arguments or working directory
-  const cwd = process.cwd();
-  
-  // Look for hints in the current working directory path
-  if (cwd.includes('gendl')) return 'gendl';
-  if (cwd.includes('emacs')) return 'emacs';
   
   // Check if we're connecting to specific ports that might indicate the backend type
   const args = process.argv;
@@ -320,12 +300,6 @@ function detectServerNameFromEnvironment() {
       const port = args[i + 1];
       if (port === '7080') return 'emacs'; // Common port for Emacs lisply backend
       if (port === '9081') return 'gendl'; // Common port for Gendl backend
-    }
-    if (args[i] === '--backend-host' && i < args.length - 2) {
-      // Check if next argument after host is a port
-      const nextArg = args[i + 2];
-      if (nextArg === '7080') return 'emacs';
-      if (nextArg === '9081') return 'gendl';
     }
   }
   
@@ -410,14 +384,19 @@ function loadConfig(program) {
   const LISP_IMPL = (options.lispImpl || getEnvVar('LISP_IMPL', DEFAULT_IMPL)).toLowerCase();
   
   // Service startup flags - use consistent parsing with our helper functions
-  const START_HTTP = options.startHttp !== false && parseBool(getEnvVar('START_HTTP', 'true'), true); // Default to true
+  // START_HTTP defaults to true unless explicitly set to false via CLI arg or env var
+  // START_HTTP logic: default true, but false if CLI --start-http false OR env var explicitly false
+  let START_HTTP = true;  // Default to true
+  if (options.startHttp === false) START_HTTP = false;  // CLI override
+  const envStartHttp = getEnvVar('START_HTTP', null);
+  if (envStartHttp !== null && parseBool(envStartHttp, true) === false) START_HTTP = false;  // Env override
   const START_HTTPS = parseBool(options.startHttps, false) || parseBool(getEnvVar('START_HTTPS', 'false'), false);
   const START_SWANK = options.startSwank !== false && parseBool(getEnvVar('START_SWANK', 'true'), true); // Default to true
   const START_TELNET = parseBool(options.startTelnet, false) || parseBool(getEnvVar('START_TELNET', 'false'), false);
   
   // Lisp REPL communication configuration
   // Enable stdio capability by default (but http is still the default communication mode)
-    const NO_USE_STDIO = options.noUseStdio !== false || parseBool(getEnvVar('NO_USE_STDIO', 'true'), true);
+    const NO_USE_STDIO = options.noUseStdio === true || parseBool(getEnvVar('NO_USE_STDIO', 'false'), false);
   
   // Default REPL prompts by implementation
   const DEFAULT_PROMPTS = {

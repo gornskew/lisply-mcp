@@ -1,0 +1,35 @@
+#!/bin/bash
+
+# Generate MCP config with correct absolute paths
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+MCP_EXEC_PATH="$SCRIPT_DIR/mcp-exec"
+
+cat > "$SCRIPT_DIR/mcp-config.json" << EOF
+{
+    "mcpServers": {
+        "gendl": {
+            "command": "$MCP_EXEC_PATH",
+            "args": [
+                "--mount", "/projects:/projects"
+            ]
+        },
+        "emacs-cont": {
+            "command": "$MCP_EXEC_PATH",
+            "args": [
+                "--server-name", "emacs-cont",
+                "--http-host-port", "7081",
+                "--http-port", "7080",
+                "--image-base-name", "genworks/skewed-emacs",
+                "--mount", "/projects:/projects"
+            ]
+        }
+    }
+}
+EOF
+
+echo "Generated MCP config at: $SCRIPT_DIR/mcp-config.json"
+echo ""
+echo "Copy the contents of this file to your Claude Desktop MCP configuration:"
+echo ""
+cat "$SCRIPT_DIR/mcp-config.json"

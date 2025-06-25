@@ -4,6 +4,7 @@
  * Handler for lisp_eval tool
  */
 
+const { getBackendConnectionInfo } = require('../lib/server');
 const { makeHttpRequest } = require('../lib/server');
 const { tryAttachToContainer } = require('../lib/docker');
 const { sendTextResponse, sendErrorResponse } = require('../lib/utils');
@@ -316,18 +317,19 @@ function handleLispEvalViaHttp(request, args, config, logger) {
     code: args.code,
     ...(args.package && { package: args.package })
   });
-  
-  // HTTP POST to lisp-eval endpoint with proper content type
-  const options = {
-    hostname: config.BACKEND_HOST,
-    port: config.HTTP_HOST_PORT,
-    path: config.EVAL_ENDPOINT,
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Content-Length': Buffer.byteLength(payload)
-    }
-  };
+
+    // HTTP POST to lisp-eval endpoint with proper content type
+    const { hostname, port } = getBackendConnectionInfo(config, logger);
+    const options = {
+	hostname,
+	port,
+	path: config.EVAL_ENDPOINT,
+	method: 'POST',
+	headers: {
+	    'Content-Type': 'application/json',
+	    'Content-Length': Buffer.byteLength(payload)
+	}
+    };
   
   // Use the common HTTP request helper
   makeHttpRequest(options, payload, (error, response) => {

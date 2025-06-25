@@ -1,0 +1,20 @@
+{
+    "mcpServers": {
+        "gendl": {
+            "command": "/home/dcooper8/projects/lisply-mcp/docker/mcp-exec",
+            "args": [
+                "--mount", "/projects:/projects"
+            ]
+        },
+        "emacs-cont": {
+            "command": "/home/dcooper8/projects/lisply-mcp/docker/mcp-exec",
+            "args": [
+                "--server-name", "emacs-cont",
+                "--http-host-port", "7081",
+                "--http-port", "7080",
+                "--image-base-name", "genworks/skewed-emacs",
+                "--mount", "/projects:/projects"
+            ]
+        }
+    }
+}

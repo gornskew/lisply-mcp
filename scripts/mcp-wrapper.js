@@ -171,16 +171,14 @@ try {
           startMcpWrapper(config, logger, handlers);
           return Promise.resolve(true);
         } else {
-          const isLocalHost = (config.BACKEND_HOST === '127.0.0.1' || config.BACKEND_HOST === 'localhost');
           const dockerAvailable = isDockerAvailable(logger, config.DOCKER_SOCKET);
           
-          if (config.AUTO_START && isLocalHost && dockerAvailable) {
+          if (config.AUTO_START && dockerAvailable) {
             logger.info(`Backend server not available, attempting to start container`);
             return startBackendContainer(config, logger, checkBackendAvailability);
           } else {
             logger.error(`Cannot start backend container. Conditions not met:
     - Auto-start: ${config.AUTO_START}
-    - Local host: ${isLocalHost}
     - Docker available: ${dockerAvailable}`);
             process.exit(1);
           }

@@ -1,0 +1,119 @@
+# Git and version control
+.git
+.gitignore
+.gitattributes
+.gitmodules
+
+# Docker files (avoid recursive inclusion)
+Dockerfile
+.dockerignore
+
+# Node.js
+node_modules
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.npm
+.node_repl_history
+
+# Environment and config
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# IDE and editor files
+.vscode
+.idea
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.temp
+/tmp
+.cache
+
+# Logs
+logs
+*.log
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directory used by tools like istanbul
+coverage
+.nyc_output
+
+# Documentation build outputs
+docs/_build
+docs/build
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Backup files
+*.bak
+*.backup
+*~
+
+# Large binary files that shouldn't be in containers
+*.iso
+*.dmg
+*.img
+*.tar.gz
+*.zip
+*.rar
+
+# Development databases
+*.db
+*.sqlite
+*.sqlite3
+
+# Build artifacts that will be generated inside container
+dist
+build
+out
+target
+
+# Package manager lockfiles (optional - comment out if you want deterministic builds)
+# package-lock.json
+# yarn.lock
+
+# Local development containers/compose files
+docker-compose.override.yml
+.docker
+
+# Test outputs
+test-results
+coverage
+
+# Emacs specific
+*~
+\#*\#
+/.emacs.desktop
+/.emacs.desktop.lock
+*.elc
+auto-save-list
+tramp
+.\#*
+
+# Lisp compilation artifacts
+*.fasl
+*.fas
+*.lib
+*.dx64fsl
+*.lx64fsl

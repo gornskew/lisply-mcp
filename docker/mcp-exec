@@ -1,0 +1,31 @@
+#!/bin/bash
+
+# MCP exec wrapper - ensures lisply-mcp container is running before
+# executing mcp-wrapper.js Leverages manage-container for container
+# management
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+MANAGE_CONTAINER="$SCRIPT_DIR/manage-container"
+
+# Function to check if container is running
+is_container_running() {
+    "$MANAGE_CONTAINER" status >/dev/null 2>&1
+}
+
+# Ensure container is running
+if ! is_container_running; then
+    echo "Container not running, starting it..." >&2
+    "$MANAGE_CONTAINER" start >&2
+    
+    # Verify it started successfully
+    if ! is_container_running; then
+        echo "Failed to start container" >&2
+        exit 1
+    fi
+    echo " Container started successfully" >&2
+else
+    echo "Container already running, using existing container..." >&2
+fi
+
+# Execute the mcp-wrapper.js with all passed arguments
+exec "$MANAGE_CONTAINER" exec node /projects/lisply-mcp/scripts/mcp-wrapper.js "$@"
