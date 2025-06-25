@@ -12,6 +12,7 @@
  * Handler for tools/list requests
  */
 
+const { getBackendConnectionInfo } = require('../lib/server');
 const { makeHttpRequest } = require('../lib/server');
 const { sendStandardResponse, sendErrorResponse } = require('../lib/utils');
 const { createPrefixedToolName } = require('../lib/config');
@@ -25,9 +26,11 @@ const { createPrefixedToolName } = require('../lib/config');
 function handleToolsList(request, config, logger) {
   logger.info('Handling tools/list request');
 
+  const { hostname, port } = getBackendConnectionInfo(config, logger);
+    
   const options = {
-    hostname: config.BACKEND_HOST,
-    port: config.HTTP_HOST_PORT,
+    hostname,
+    port,
     path: `${config.BASE_PATH}/tools/list`,
     method: 'GET'
   };
