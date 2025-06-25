@@ -6,21 +6,50 @@
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 MANAGE_CONTAINER="$SCRIPT_DIR/manage-container"
+LOCKFILE="/tmp/mcp-exec-container.lock"
+LOCKFD=99
 
 # Track if we started the container in this session
 CONTAINER_STARTED_BY_US=false
 
-# Cleanup function
-cleanup() {
-    if [ "$CONTAINER_STARTED_BY_US" = "true" ]; then
-        echo "Cleaning up container started by this session..." >&2
-        "$MANAGE_CONTAINER" stop >&2
+# Locking functions to prevent race conditions
+lock() {
+    local prefix=$1
+    local fd=${2:-$LOCKFD}
+    local lock_file=$LOCKFILE
+
+    # Create lock file if it doesn't exist
+    eval "exec $fd>\"$lock_file\""
+
+    # Acquire exclusive lock with timeout
+    if flock -x -w 10 $fd; then
+        return 0
     else
-        echo "Container was pre-existing, leaving it running..." >&2
+        echo "Failed to acquire lock after 10 seconds" >> /tmp/mcp-exec.log
+        return 1
     fi
 }
 
-# Set up exit trap
+unlock() {
+    local fd=${1:-$LOCKFD}
+    flock -u $fd
+}
+
+# Cleanup function
+cleanup() {
+    if [ "$CONTAINER_STARTED_BY_US" = "true" ]; then
+        echo "Stopping container started by this session..." >> /tmp/mcp-exec.log
+        "$MANAGE_CONTAINER" stop >> /tmp/mcp-exec.log
+        echo "Container stop completed" >> /tmp/mcp-exec.log
+    else
+        echo "Container was pre-existing, leaving it running..." >> /tmp/mcp-exec.log
+    fi
+    
+    # Always release lock on cleanup
+    unlock
+}
+
+# Set up trap for cleanup
 trap cleanup EXIT
 
 # Function to check if container is running
@@ -28,21 +57,41 @@ is_container_running() {
     "$MANAGE_CONTAINER" status >/dev/null 2>&1
 }
 
-# Ensure container is running
+# Acquire lock before checking/starting container
+if ! lock; then
+    echo "Could not acquire container lock, exiting" >> /tmp/mcp-exec.log
+    exit 1
+fi
+
+echo "Acquired container lock, checking container status..." >> /tmp/mcp-exec.log
+
+# Ensure container is running (now protected by lock)
 if ! is_container_running; then
-    echo "Container not running, starting it..." >&2
+    echo "Container not running, starting it..." >> /tmp/mcp-exec.log
     CONTAINER_STARTED_BY_US=true
-    "$MANAGE_CONTAINER" start >&2
+    "$MANAGE_CONTAINER" start >> /tmp/mcp-exec.log 2>&1
     
     # Verify it started successfully
     if ! is_container_running; then
-        echo "Failed to start container" >&2
+        echo "Failed to start container" >> /tmp/mcp-exec.log
+        unlock
         exit 1
     fi
-    echo " Container started successfully" >&2
+    echo "Container started successfully" >> /tmp/mcp-exec.log
 else
-    echo "Container already running, using existing container..." >&2
+    echo "Container already running, using existing container..." >> /tmp/mcp-exec.log
 fi
 
+# Release lock after container is confirmed running
+unlock
+echo "Released container lock, proceeding with execution..." >> /tmp/mcp-exec.log
+
+echo "Executing the mcp-wrapper.js with all passed arguments" >> /tmp/mcp-exec.log
+
 # Execute the mcp-wrapper.js with all passed arguments
-exec "$MANAGE_CONTAINER" exec node /projects/lisply-mcp/scripts/mcp-wrapper.js "$@"
+"$MANAGE_CONTAINER" exec node /projects/lisply-mcp/scripts/mcp-wrapper.js "$@"
+
+EXEC_EXIT_CODE=$?
+echo "Node process exited with code $EXEC_EXIT_CODE, calling cleanup." >> /tmp/mcp-exec.log
+
+cleanup

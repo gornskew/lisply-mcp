@@ -25,7 +25,51 @@ case "$1" in
     start)
         echo "Starting $CONTAINER_NAME container..."
         
-        # Stop existing container if running
+        # Check if container is already running
+        if docker ps --filter "name=$CONTAINER_NAME" --format "table {{.Names}}" | grep -q "$CONTAINER_NAME"; then
+            echo "[INFO] Container $CONTAINER_NAME is already running"
+            echo ""
+            echo "Container info:"
+            docker ps --filter "name=$CONTAINER_NAME" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+            echo ""
+            echo "Available services:"
+            echo "  * Lisply-MCP server (via mcp-exec)"
+            echo "  * Network: $NETWORK_NAME"
+            echo "  * Hostname: mcp-backend"
+            echo "  * Can connect to: emacs-backend:7080, gendl-backend:9080"
+            echo "  * Node.js development tools available"
+            return 0
+        fi
+        
+        # Check if container exists but is stopped
+        if docker ps -a --filter "name=$CONTAINER_NAME" --format "table {{.Names}}" | grep -q "$CONTAINER_NAME"; then
+            echo "[INFO] Container $CONTAINER_NAME exists but is stopped, starting it..."
+            docker start "$CONTAINER_NAME"
+            
+            # Wait for container to be ready
+            sleep 2
+            
+            # Verify it started
+            if docker ps --filter "name=$CONTAINER_NAME" --format "table {{.Names}}" | grep -q "$CONTAINER_NAME"; then
+                echo "[OK] Container $CONTAINER_NAME restarted successfully"
+                echo ""
+                echo "Available services:"
+                echo "  * Lisply-MCP server (via mcp-exec)"
+                echo "  * Network: $NETWORK_NAME"
+                echo "  * Hostname: mcp-backend"
+                echo "  * Can connect to: emacs-backend:7080, gendl-backend:9080"
+                echo "  * Node.js development tools available"
+                return 0
+            else
+                echo "[ERROR] Failed to restart existing container"
+                exit 1
+            fi
+        fi
+        
+        # Container doesn't exist, create a new one
+        echo "[INFO] Creating new container $CONTAINER_NAME..."
+        
+        # Stop and remove any existing container with same name (cleanup)
         docker stop "$CONTAINER_NAME" 2>/dev/null || true
         docker rm "$CONTAINER_NAME" 2>/dev/null || true
         
@@ -89,13 +133,49 @@ case "$1" in
         "$0" start
         ;;
         
+    force-restart)
+        echo "Force restarting $CONTAINER_NAME container (will recreate)..."
+        
+        # Stop and remove existing container
+        docker stop "$CONTAINER_NAME" 2>/dev/null || true
+        docker rm "$CONTAINER_NAME" 2>/dev/null || true
+        
+        # Create network if it doesn't exist
+        docker network create "$NETWORK_NAME" 2>/dev/null || true
+
+	echo "Mounting ${PROJECT_ROOT} to /projects in container."
+	
+        # Start fresh container
+        docker run -d \
+            --name "$CONTAINER_NAME" \
+            --label "lisply-mcp-middleware=true" \
+            --label "lisply-mcp-session=$(date +%s)-$$" \
+            --hostname "mcp-backend" \
+            --network "$NETWORK_NAME" \
+	    --group-add $(getent group docker | cut -d: -f3) \
+	    -v /var/run/docker.sock:/var/run/docker.sock \
+            --mount "type=bind,source=$PROJECT_ROOT,target=/projects" \
+            "$IMAGE_NAME"
+        
+        echo "Container recreated. Waiting for it to be ready..."
+        sleep 2
+        
+        # Check if container is running
+        if docker ps --filter "name=$CONTAINER_NAME" --format "table {{.Names}}" | grep -q "$CONTAINER_NAME"; then
+            echo "[OK] Container $CONTAINER_NAME recreated and running"
+        else
+            echo "[ERROR] Failed to recreate container"
+            exit 1
+        fi
+        ;;
+        
     exec)
         shift  # Remove 'exec' from arguments
         docker exec -i "$CONTAINER_NAME" "$@"
         ;;
         
     *)
-        echo "Usage: $0 {start|stop|status|restart|exec <command>}"
+        echo "Usage: $0 {start|stop|status|restart|force-restart|exec <command>}"
         echo ""
         echo "Examples:"
         echo "  $0 start                           # Start the container"
