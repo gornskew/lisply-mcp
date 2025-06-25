@@ -9,6 +9,28 @@ const { exec, execSync, spawn } = require('child_process');
 const { getGitBranch, getEnvVar, sanitizeDockerTag } = require('./config');
 
 /**
+ * Get Docker socket arguments for container access
+ * @param {Object} logger - Logger instance
+ * @returns {Array} - Array of Docker arguments for socket access
+ */
+function getDockerSocketArgs(logger) {
+  const args = [];
+  if (fs.existsSync('/var/run/docker.sock')) {
+    args.push('-v', '/var/run/docker.sock:/var/run/docker.sock');
+    try {
+      const socketGroupId = execSync('stat -c %g /var/run/docker.sock', { encoding: 'utf8' }).trim();
+      if (socketGroupId && !isNaN(socketGroupId)) {
+        args.push('--group-add', socketGroupId);
+        logger.debug(`Added Docker socket access with group ID: ${socketGroupId}`);
+      }
+    } catch (error) {
+      logger.debug(`Could not get socket group ID: ${error.message}`);
+    }
+  }
+  return args;
+}
+
+/**
  * Check if Docker is available for container management
  * @param {Object} logger - Logger instance
  * @returns {boolean} - Whether Docker is available
@@ -461,6 +483,9 @@ function startBackendContainer(config, logger, checkBackendAvailability)
                 
                 ...(config.START_TELNET ? ['-p', `${config.TELNET_HOST_PORT}:${config.TELNET_PORT}`] : []),
                 
+                // Add Docker socket access
+                ...getDockerSocketArgs(logger),
+                
                 // Add any mount points
                 ...config.ALL_MOUNTS.flatMap(mount => ['-v', mount])
             ];
@@ -630,5 +655,6 @@ module.exports = {
     cleanup,
     ensureSharedNetwork,
     generateContainerName,
-    isGendlBasedImage
+    isGendlBasedImage,
+    getDockerSocketArgs
 };
