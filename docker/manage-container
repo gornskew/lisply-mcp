@@ -21,6 +21,8 @@ NETWORK_NAME="${LISPLY_NETWORK_NAME:-skewed-emacs-network}"
 IMAGE_NAME="gornskew/lisply-mcp:${branch}"
 PROJECT_ROOT="$(dirname "$(cd "$(dirname "${BASH_SOURCE[0]}")" && cd ../ && pwd)")"
 
+COPILOT_LANGUAGE_SERVER_PORT="${COPILOT_LANGUAGE_SERVER_PORT:-3030}"
+
 case "$1" in
     start)
         echo "Starting $CONTAINER_NAME container..."
@@ -80,6 +82,7 @@ case "$1" in
 	
         # Start container connected to the shared network
         docker run -d \
+            -e COPILOT_LANGUAGE_SERVER_PORT \
             --name "$CONTAINER_NAME" \
             --label "lisply-mcp-middleware=true" \
             --label "lisply-mcp-session=$(date +%s)-$$" \
@@ -88,6 +91,8 @@ case "$1" in
 	    --group-add $(getent group docker | cut -d: -f3) \
 	    -v /var/run/docker.sock:/var/run/docker.sock \
             --mount "type=bind,source=$PROJECT_ROOT,target=/projects" \
+            --mount "type=bind,source=$HOME/.claude,target=/home/node/.claude" \
+	    --mount "type=bind,source=$HOME/.config,target=/home/node/.config" \
             "$IMAGE_NAME"
         
         echo "Container started. Waiting for it to be ready..."

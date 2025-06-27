@@ -23,7 +23,7 @@ cat > "$SCRIPT_DIR/mcp-config.json" << EOF
                 "--server-name", "emacs-cont",
                 "--http-host-port", "7081",
                 "--http-port", "7080",
-                "--image-base-name", "genworks/skewed-emacs",
+                "--image-base-name", "gornskew/skewed-emacs",
                 "--backend-host", "emacs-backend",
                 "--mount", "/projects:/projects",
                 "--mount", "/tmp/.X11-unix:/tmp/.X11-unix",
