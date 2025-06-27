@@ -226,10 +226,12 @@ async function ensureSharedNetwork(logger) {
 /**
  * Generate a meaningful container name based on image type
  */
+/*
 function generateContainerName(dockerImage, serverName) {
   const imageType = isGendlBasedImage(dockerImage) ? 'gendl' : 'emacs';
   return `lisply-${imageType}`;
-}
+  }
+*/
 
 /**
  * Try to pull the latest version of the Docker image
@@ -453,7 +455,9 @@ function startBackendContainer(config, logger, checkBackendAvailability)
             
             // Ensure shared network exists and generate meaningful container name
             const networkName = await ensureSharedNetwork(logger);
-            const containerName = generateContainerName(dockerImage, config.SERVER_NAME);
+            //const containerName = generateContainerName(dockerImage, config.SERVER_NAME);
+
+	    const containerName = config.SERVER_NAME;
             
             // Determine and store hostname when creating the container
             const containerHostname = global.backendHostname; 
@@ -711,7 +715,7 @@ module.exports = {
     startBackendContainer,
     cleanup,
     ensureSharedNetwork,
-    generateContainerName,
+    // generateContainerName,
     isGendlBasedImage,
     getDockerSocketArgs,
     setupExitHandlers

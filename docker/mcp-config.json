@@ -1,22 +1,24 @@
 {
     "mcpServers": {
         "gendl": {
-            "command": "/home/dcooper8/projects/lisply-mcp/docker/mcp-exec",
+            "command": "wsl",
             "args": [
-                "--backend-host", "gendl-backend",
+	        "/home/dcooper8/projects/lisply-mcp/docker/mcp-exec",    
+                "--backend-host", "gendl",
                 "--mount", "/projects:/projects",
                 "--mount", "/var/run/docker.sock:/var/run/docker.sock",
                 "--mount", "/tmp/.X11-unix:/tmp/.X11-unix"
             ]
         },
-        "emacs-cont": {
-            "command": "/home/dcooper8/projects/lisply-mcp/docker/mcp-exec",
+        "skewed-emacs": {
+            "command": "wsl",
             "args": [
-                "--server-name", "emacs-cont",
+	        "/home/dcooper8/projects/lisply-mcp/docker/mcp-exec",  
+                "--server-name", "skewed-emacs",
                 "--http-host-port", "7081",
                 "--http-port", "7080",
                 "--image-base-name", "gornskew/skewed-emacs",
-                "--backend-host", "emacs-backend",
+                "--backend-host", "skewed-emacs",
                 "--mount", "/projects:/projects",
                 "--mount", "/tmp/.X11-unix:/tmp/.X11-unix",
                 "--mount", "/var/run/docker.sock:/var/run/docker.sock"
