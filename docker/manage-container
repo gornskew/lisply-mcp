@@ -3,6 +3,17 @@
 # Container management script for Lisply-MCP and other included
 # Node.js services
 
+# need to set TERM and COLORTERM because this is likely being launched
+# from a non-terminal setting, but we want to be able to `docker exec`
+# in from a terminal and get sane terminal behavior.
+
+#
+# If you are using a dumb terminal for docker exec, comment out the
+# following two:
+#
+TERM=xterm-256color
+COLORTERM=truecolor
+
 CONTAINER_NAME="lisply-mcp"
 
 # Get branch name for image tagging (same logic as build script)
@@ -82,7 +93,8 @@ case "$1" in
 	
         # Start container connected to the shared network
         docker run -d \
-            -e TERM=$TERM -e COLORTERM=$COLORTERM \
+            --env TERM=${TERM} \
+            --env COLORTERM=${COLORTERM} \
             --name "$CONTAINER_NAME" \
             --label "lisply-mcp-middleware=true" \
             --label "lisply-mcp-session=$(date +%s)-$$" \
