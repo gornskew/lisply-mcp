@@ -484,6 +484,8 @@ function startBackendContainer(config, logger, checkBackendAvailability)
                 '-e', `START_SWANK=${config.START_SWANK}`,
                 '-e', `SWANK_PORT=${config.SWANK_PORT}`,
                 '-e', `SWANK_HOST_PORT=${config.SWANK_HOST_PORT}`,
+		'-e', `TERM=${process.env.TERM}`,
+		'-e', `COLORTERM=${process.env.COLORTERM}`,
                 '-p', `${config.HTTP_HOST_PORT}:${config.HTTP_PORT}`,
                 
                 // Conditional port mappings based on image type

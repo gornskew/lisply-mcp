@@ -82,7 +82,7 @@ case "$1" in
 	
         # Start container connected to the shared network
         docker run -d \
-            -e COPILOT_LANGUAGE_SERVER_PORT \
+            -e TERM=$TERM -e COLORTERM=$COLORTERM \
             --name "$CONTAINER_NAME" \
             --label "lisply-mcp-middleware=true" \
             --label "lisply-mcp-session=$(date +%s)-$$" \
