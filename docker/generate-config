@@ -7,9 +7,9 @@ cat > "./mcp-config.json" << EOF
 {
     "mcpServers": {
         "gendl": {
-            "command": "wsl",
+            "command": "node",
             "args": [
-	        "/app/scripts/mcp-wrapper.js"
+	        "/app/scripts/mcp-wrapper.js",
                 "--backend-host", "gendl",
                 "--mount", "/projects:/projects",
                 "--mount", "/var/run/docker.sock:/var/run/docker.sock",
@@ -17,9 +17,9 @@ cat > "./mcp-config.json" << EOF
             ]
         },
         "skewed-emacs": {
-            "command": "wsl",
+            "command": "node",
             "args": [
-	    	"/app/scripts/mcp-wrapper.js"
+	    	"/app/scripts/mcp-wrapper.js",
                 "--server-name", "skewed-emacs",
                 "--http-host-port", "7081",
                 "--http-port", "7080",
