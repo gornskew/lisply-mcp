@@ -2,16 +2,14 @@
 
 # Generate MCP config with correct absolute paths
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-MCP_EXEC_PATH="$SCRIPT_DIR/mcp-exec"
 
-cat > "$SCRIPT_DIR/mcp-config.json" << EOF
+cat > "./mcp-config.json" << EOF
 {
     "mcpServers": {
         "gendl": {
             "command": "wsl",
             "args": [
-	        "$MCP_EXEC_PATH",    
+	        "/app/scripts/mcp-wrapper.js"
                 "--backend-host", "gendl",
                 "--mount", "/projects:/projects",
                 "--mount", "/var/run/docker.sock:/var/run/docker.sock",
@@ -21,7 +19,7 @@ cat > "$SCRIPT_DIR/mcp-config.json" << EOF
         "skewed-emacs": {
             "command": "wsl",
             "args": [
-	        "$MCP_EXEC_PATH",  
+	    	"/app/scripts/mcp-wrapper.js"
                 "--server-name", "skewed-emacs",
                 "--http-host-port", "7081",
                 "--http-port", "7080",
@@ -36,8 +34,5 @@ cat > "$SCRIPT_DIR/mcp-config.json" << EOF
 }
 EOF
 
-echo "Generated MCP config at: $SCRIPT_DIR/mcp-config.json"
+echo "Generated default MCP config at $(pwd)/mcp-config.json."
 echo ""
-echo "Copy the contents of this file to your Claude Desktop MCP configuration:"
-echo ""
-cat "$SCRIPT_DIR/mcp-config.json"

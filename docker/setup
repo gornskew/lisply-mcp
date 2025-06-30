@@ -6,29 +6,25 @@ set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-echo " Setting up lisply-mcp with Docker..."
+echo " Setting up lisply-mcp with Docker from ${SCRIPT_DIR}..."
 echo ""
+
+cd ${SCRIPT_DIR}
+
+echo ""
+echo " Generating MCP configuration..."
+./generate-config
+
 
 # Build the image
 echo " Building Docker image..."
 "$SCRIPT_DIR/build"
 
-echo ""
-echo " Generating MCP configuration..."
-"$SCRIPT_DIR/generate-config"
+echo "Default mcp config built into /app/scripts/mcp-config.json:"
+cat ./mcp-config.json
 
 echo ""
-echo "Setup complete!"
-echo ""
-echo " Your MCP servers are now ready to use!"
-echo ""
-echo " Next steps:"
-echo "1. Copy the MCP configuration from: $SCRIPT_DIR/mcp-config.json"
-echo "2. Add it to your Claude Desktop configuration"
-echo "3. Restart Claude Desktop"
-echo ""
-echo " The container will start automatically when Claude Desktop connects"
-echo "   to any MCP server. No manual container management needed!"
+echo "Setup Done."
 echo ""
 echo " Optional container management:"
 echo "  ./docker/manage-container status  # Check if running"
