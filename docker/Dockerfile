@@ -8,8 +8,8 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y \
     git \
     curl \
-    procps \
     socat \
+    procps \
     && rm -rf /var/lib/apt/lists/*
 
 RUN curl -fsSL https://download.docker.com/linux/static/stable/x86_64/docker-24.0.7.tgz | tar xz --strip-components=1 -C /usr/local/bin docker/docker \
@@ -29,6 +29,7 @@ COPY package*.json ./
 RUN npm install -g \
     @anthropic-ai/claude-code \
     @github/copilot-language-server
+
 
 # Install any local dependencies
 RUN npm install || true

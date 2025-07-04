@@ -473,9 +473,6 @@ function startBackendContainer(config, logger, checkBackendAvailability)
                 '--label', 'lisply-mcp-child=true',
                 '--label', `lisply-mcp-session=${sessionId}`,
                 '--label', `lisply-mcp-parent=${process.env.HOSTNAME || process.env.CONTAINER_NAME || 'lisply-mcp'}`,
-                
-                // Add controlled access to host Emacs service only
-                '--add-host', 'host.docker.internal:host-gateway',
                 '-v', `/tmp/.X11-unix:/tmp/.X11-unix`,
                 '-e', `DISPLAY=:0`,
                 '-e', `START_HTTP=${config.START_HTTP}`,
@@ -489,7 +486,6 @@ function startBackendContainer(config, logger, checkBackendAvailability)
                 '-e', `SWANK_HOST_PORT=${config.SWANK_HOST_PORT}`,
 		'-e', `TERM=${process.env.TERM}`,
 		'-e', `COLORTERM=${process.env.COLORTERM}`,
-                '-e', 'HOST_EMACS_URL=http://host.docker.internal:7080',
                 '-p', `${config.HTTP_HOST_PORT}:${config.HTTP_PORT}`,
                 
                 // Conditional port mappings based on image type

@@ -98,6 +98,7 @@ case "$1" in
             --name "$CONTAINER_NAME" \
             --label "lisply-mcp-middleware=true" \
             --label "lisply-mcp-session=$(date +%s)-$$" \
+	    --add-host "host.docker.internal:host-gateway" \
             --hostname "mcp-backend" \
             --network "$NETWORK_NAME" \
 	    --group-add $(getent group docker | cut -d: -f3) \
