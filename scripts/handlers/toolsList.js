@@ -112,6 +112,43 @@ function handleToolsList(request, config, logger) {
         });
       }
 
+      // Add documentation tools
+      const hasGetDocsListTool = toolsData.tools.some(tool => tool.name === 'get_docs_list');
+      const hasGetDocsTool = toolsData.tools.some(tool => tool.name === 'get_docs');
+      
+      if (!hasGetDocsListTool) {
+        logger.debug('Adding get_docs_list tool to tools list');
+        
+        toolsData.tools.push({
+          "name": "get_docs_list",
+          "description": "List available documentation from the backend server",
+          "inputSchema": {
+            "type": "object",
+            "properties": {},
+            "required": []
+          }
+        });
+      }
+      
+      if (!hasGetDocsTool) {
+        logger.debug('Adding get_docs tool to tools list');
+        
+        toolsData.tools.push({
+          "name": "get_docs",
+          "description": "Get documentation content from the backend server",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "doc_id": {
+                "type": "string",
+                "description": "Document ID to retrieve (e.g., 'claude-md', 'readme', 'yadd')"
+              }
+            },
+            "required": ["doc_id"]
+          }
+        });
+      }
+
       // Prefix all tool names with server name for disambiguation
       logger.debug(`Prefixing tool names with server name: ${config.SERVER_NAME}`);
       for (let i = 0; i < toolsData.tools.length; i++) {
