@@ -965,3 +965,8 @@ payment gateway are available at
 
 The full text of the license can be found in the COPYING.txt file in
 this directory. 
+
+## MCP Server Registries
+
+- [MCPHub](https://mcphub.com/mcp-servers/gornskew/lisply-mcp)
+
