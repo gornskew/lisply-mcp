@@ -25,14 +25,26 @@ RUN curl -fsSL https://download.docker.com/linux/static/stable/x86_64/docker-24.
 # Copy package.json and package-lock.json if they exist
 COPY package*.json ./
 
-# Install Node dependencies including language servers and tools
+# Install global tools that don't need user updates
 RUN npm install -g \
-    @anthropic-ai/claude-code \
     @github/copilot-language-server
-
 
 # Install any local dependencies
 RUN npm install || true
+
+# Switch to node user to install claude locally
+USER node
+
+# Install claude locally for the node user (simulating claude migrate-installer)
+RUN mkdir -p /home/node/.claude/local && \
+    npm install @anthropic-ai/claude-code --prefix /home/node/.claude/local && \
+    ln -sf /home/node/.claude/local/node_modules/.bin/claude /home/node/.claude/local/claude
+
+# Add claude alias to .bashrc
+RUN echo 'alias claude="/home/node/.claude/local/claude"' >> /home/node/.bashrc
+
+# Switch back to root for remaining setup
+USER root
 
 # Copy the entire project (scripts, config, etc.)
 COPY . .
@@ -51,9 +63,13 @@ set -e
 
 echo "Starting container setup..."
 
+# Source .bashrc to get claude alias for node user
+export HOME=/home/node
+source /home/node/.bashrc
+
 echo "Container ready. Programs ready to be exec'ed:"
 echo "- lisply-mcp/scripts/mcp-wrapper.js (Lisply-MCP)"
-echo "- claude (Claude Code) "
+echo "- claude (Claude Code) - local installation at /home/node/.claude/local/claude"
 echo "- copilot-language-server"
 
 echo "Entering sleep loop..."
