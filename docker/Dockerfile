@@ -59,6 +59,15 @@ RUN ./scripts/mcp-wrapper.js --help
 # Create entrypoint script
 COPY <<EOF /usr/local/bin/entrypoint.sh
 #!/bin/bash
+
+cleanup() {
+    echo "Received SIGTERM, shutting down..."
+    exit 0
+}
+
+# Trap SIGTERM and call cleanup
+trap cleanup SIGTERM
+
 set -e
 
 echo "Starting container setup..."
@@ -74,7 +83,41 @@ echo "- copilot-language-server"
 
 echo "Entering sleep loop..."
 
-tail -f /dev/null
+# Interactive loop to keep container running and respect SIGTERM
+while true; do
+    echo -n "node> "
+    if ! read -r line; then
+        echo ""
+        echo "stdin closed - shutting down container"
+        break
+    fi
+
+    # Skip empty lines
+    if [[ -z "$line" ]]; then
+        continue
+    fi
+
+    # Handle special commands
+    case "$line" in
+        ".help")
+            echo "Available commands:"
+            echo "  .help    - Show this help"
+            echo "  .quit    - Exit container"
+            continue
+            ;;
+        ".quit" | "quit" | "exit")
+            echo "Goodbye!"
+            break
+            ;;
+        *)
+            echo "Unknown command: $line"
+            echo "Try: .help for available commands"
+            continue
+            ;;
+    esac
+done
+
+cleanup
 
 EOF
 
