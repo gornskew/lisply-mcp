@@ -50,7 +50,7 @@ case "$1" in
             echo "  * Lisply-MCP middleware server via mcp-exec"
             echo "  * Network: $NETWORK_NAME"
             echo "  * Hostname: ${HOSTNAME}"
-            return 0
+            exit 0
         fi
         
         # Check if container exists but is stopped
@@ -71,7 +71,7 @@ case "$1" in
                 echo "  * Hostname: mcp-backend"
                 echo "  * Can connect to: emacs-backend:7080, gendl-backend:9080"
                 echo "  * Node.js development tools available"
-                return 0
+                exit 0
             else
                 echo "[ERROR] Failed to restart existing container"
                 exit 1
@@ -158,6 +158,11 @@ case "$1" in
 
     down)
 	"$0" stop
+	;;
+
+    exec)
+	shift
+	docker exec -i "$CONTAINER_NAME" "$@"
 	;;
     
     *)
