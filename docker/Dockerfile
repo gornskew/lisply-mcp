@@ -57,70 +57,7 @@ RUN ./scripts/mcp-wrapper.js --help
 
 
 # Create entrypoint script
-COPY <<EOF /usr/local/bin/entrypoint.sh
-#!/bin/bash
-
-cleanup() {
-    echo "Received SIGTERM, shutting down..."
-    exit 0
-}
-
-# Trap SIGTERM and call cleanup
-trap cleanup SIGTERM
-
-set -e
-
-echo "Starting container setup..."
-
-# Source .bashrc to get claude alias for node user
-export HOME=/home/node
-source /home/node/.bashrc
-
-echo "Container ready. Programs ready to be exec'ed:"
-echo "- lisply-mcp/scripts/mcp-wrapper.js (Lisply-MCP)"
-echo "- claude (Claude Code) - local installation at /home/node/.claude/local/claude"
-echo "- copilot-language-server"
-
-echo "Entering sleep loop..."
-
-# Interactive loop to keep container running and respect SIGTERM
-while true; do
-    echo -n "node> "
-    if ! read -r line; then
-        echo ""
-        echo "stdin closed - shutting down container"
-        break
-    fi
-
-    # Skip empty lines
-    if [[ -z "$line" ]]; then
-        continue
-    fi
-
-    # Handle special commands
-    case "$line" in
-        ".help")
-            echo "Available commands:"
-            echo "  .help    - Show this help"
-            echo "  .quit    - Exit container"
-            continue
-            ;;
-        ".quit" | "quit" | "exit")
-            echo "Goodbye!"
-            break
-            ;;
-        *)
-            echo "Unknown command: $line"
-            echo "Try: .help for available commands"
-            continue
-            ;;
-    esac
-done
-
-cleanup
-
-EOF
-
+COPY ./docker/entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
 
 # Expose ports for language servers and other services

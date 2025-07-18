@@ -15,6 +15,7 @@ TERM=xterm-256color
 COLORTERM=truecolor
 
 CONTAINER_NAME="lisply-mcp"
+HOSTNAME=${CONTAINER_NAME}
 
 # Get branch name for image tagging (same logic as build script)
 if [ -z "${CI_COMMIT_REF_NAME}" ]; then
@@ -46,11 +47,9 @@ case "$1" in
             docker ps --filter "name=$CONTAINER_NAME" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
             echo ""
             echo "Available services:"
-            echo "  * Lisply-MCP server (via mcp-exec)"
+            echo "  * Lisply-MCP middleware server via mcp-exec"
             echo "  * Network: $NETWORK_NAME"
-            echo "  * Hostname: mcp-backend"
-            echo "  * Can connect to: emacs-backend:7080, gendl-backend:9080"
-            echo "  * Node.js development tools available"
+            echo "  * Hostname: ${HOSTNAME}"
             return 0
         fi
         
@@ -67,7 +66,7 @@ case "$1" in
                 echo "[OK] Container $CONTAINER_NAME restarted successfully"
                 echo ""
                 echo "Available services:"
-                echo "  * Lisply-MCP server (via mcp-exec)"
+                echo "  * Lisply-MCP server via mcp-exec"
                 echo "  * Network: $NETWORK_NAME"
                 echo "  * Hostname: mcp-backend"
                 echo "  * Can connect to: emacs-backend:7080, gendl-backend:9080"
@@ -92,21 +91,25 @@ case "$1" in
 	echo "Mounting ${PROJECT_ROOT} to /projects in container."
 	
         # Start container connected to the shared network
+
+	# Temporary simplify:
+	#
+
         docker run -d \
-            --env TERM=${TERM} \
-            --env COLORTERM=${COLORTERM} \
-            --name "$CONTAINER_NAME" \
-            --label "lisply-mcp-middleware=true" \
-            --label "lisply-mcp-session=$(date +%s)-$$" \
-	    --add-host "host.docker.internal:host-gateway" \
-            --hostname "mcp-backend" \
-            --network "$NETWORK_NAME" \
-	    --group-add $(getent group docker | cut -d: -f3) \
-	    -v /var/run/docker.sock:/var/run/docker.sock \
-            --mount "type=bind,source=$PROJECT_ROOT,target=/projects" \
-            --mount "type=bind,source=$HOME/.claude,target=/home/node/.claude" \
-	    --mount "type=bind,source=$HOME/.config,target=/home/node/.config" \
-            "$IMAGE_NAME"
+	       --add-host "host.docker.internal:host-gateway" \
+	       --label "lisply-mcp-middleware=true" \
+	       --label "lisply-mcp-session=$(date +%s)-$$" \
+	       -v /var/run/docker.sock:/var/run/docker.sock \
+               --mount "type=bind,source=$PROJECT_ROOT,target=/projects" \
+               --mount "type=bind,source=$HOME/.claude,target=/home/node/.claude" \
+	       --mount "type=bind,source=$HOME/.config,target=/home/node/.config" \
+               --env TERM=${TERM} \
+               --env COLORTERM=${COLORTERM} \
+               --name "$CONTAINER_NAME" \
+               --hostname "$HOSTNAME" \
+               --network "$NETWORK_NAME" \
+	       --group-add $(getent group docker | cut -d: -f3) \
+               "$IMAGE_NAME"
         
         echo "Container started. Waiting for it to be ready..."
         sleep 2
@@ -116,11 +119,9 @@ case "$1" in
             echo "[OK] Container $CONTAINER_NAME is running"
             echo ""
             echo "Available services:"
-            echo "  * Lisply-MCP server (via mcp-exec)"
+            echo "  * Lisply-MCP server via mcp-exec"
             echo "  * Network: $NETWORK_NAME"
-            echo "  * Hostname: mcp-backend"
-            echo "  * Can connect to: emacs-backend:7080, gendl-backend:9080"
-            echo "  * Node.js development tools available"
+            echo "  * Hostname: $HOSTNAME"
         else
             echo "[ERROR] Failed to start container"
             exit 1
@@ -150,50 +151,17 @@ case "$1" in
         "$0" stop
         "$0" start
         ;;
-        
-    force-restart)
-        echo "Force restarting $CONTAINER_NAME container (will recreate)..."
-        
-        # Stop and remove existing container
-        docker stop "$CONTAINER_NAME" 2>/dev/null || true
-        docker rm "$CONTAINER_NAME" 2>/dev/null || true
-        
-        # Create network if it doesn't exist
-        docker network create "$NETWORK_NAME" 2>/dev/null || true
 
-	echo "Mounting ${PROJECT_ROOT} to /projects in container."
-	
-        # Start fresh container
-        docker run -d \
-            --name "$CONTAINER_NAME" \
-            --label "lisply-mcp-middleware=true" \
-            --label "lisply-mcp-session=$(date +%s)-$$" \
-            --hostname "mcp-backend" \
-            --network "$NETWORK_NAME" \
-	    --group-add $(getent group docker | cut -d: -f3) \
-	    -v /var/run/docker.sock:/var/run/docker.sock \
-            --mount "type=bind,source=$PROJECT_ROOT,target=/projects" \
-            "$IMAGE_NAME"
-        
-        echo "Container recreated. Waiting for it to be ready..."
-        sleep 2
-        
-        # Check if container is running
-        if docker ps --filter "name=$CONTAINER_NAME" --format "table {{.Names}}" | grep -q "$CONTAINER_NAME"; then
-            echo "[OK] Container $CONTAINER_NAME recreated and running"
-        else
-            echo "[ERROR] Failed to recreate container"
-            exit 1
-        fi
-        ;;
-        
-    exec)
-        shift  # Remove 'exec' from arguments
-        docker exec -i "$CONTAINER_NAME" "$@"
-        ;;
-        
+    up)
+	"$0" start
+	;;
+
+    down)
+	"$0" stop
+	;;
+    
     *)
-        echo "Usage: $0 {start|stop|status|restart|force-restart|exec <command>}"
+        echo "Usage: $0 {up|start|stop|status|restart <command>}"
         echo ""
         echo "Examples:"
         echo "  $0 start                           # Start the container"
