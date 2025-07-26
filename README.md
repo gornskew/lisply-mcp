@@ -39,6 +39,15 @@ arbitrary Lisp expressions, including creating, compiling, loading,
 and testing entire files and projects.
 
 
+## Extra Quick Start
+
+Follow the "Containerized Runnings" section of the [skewed-emacs
+README](https://github.com/gornskew/skewed-emacs).
+
+This will get you a Docker Compose setup including a preconfigured
+containerized version of Lisply-MCP. 
+
+
 ## Quick Start
 
 The following will get you up and running quickly with a minimal
@@ -202,8 +211,8 @@ The minimal default configuration described in the Quick Start aboves
 will pull and run a
 [Gendl](https://gitlab.common-lisp.net/gendl/gendl) docker container
 which contains a Common Lisp superset sporting a standard REPL
-(Read-Eval-Print Loop). Note that work is also in progress on a second
-Lisply backend implementation for Emacs lisp, within the [Skewed
+(Read-Eval-Print Loop). Note a second Lisply backend implementation
+for Emacs lisp also exists, within the [Skewed
 Emacs](https://github.com/gornskew/skewed-emacs/dot-files/emacs.d/sideloaded/lisply-backend/README.md)
 project.
 
