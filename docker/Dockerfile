@@ -38,7 +38,8 @@ USER node
 # Install claude locally for the node user (simulating claude migrate-installer)
 RUN mkdir -p /home/node/.claude/local && \
     npm install @anthropic-ai/claude-code --prefix /home/node/.claude/local && \
-    ln -sf /home/node/.claude/local/node_modules/.bin/claude /home/node/.claude/local/claude
+    ln -sf /home/node/.claude/local/node_modules/.bin/claude /home/node/.claude/local/claude && \
+    ln -s /projects /home/node/projects
 
 # Add claude alias to .bashrc
 RUN echo 'alias claude="/home/node/.claude/local/claude"' >> /home/node/.bashrc
