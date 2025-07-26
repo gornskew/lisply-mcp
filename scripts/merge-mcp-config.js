@@ -8,7 +8,7 @@ const path = require('path');
 
 const baseConfigPath = '/app/docker/mcp-config.json';
 const privateConfigPath = '/projects/skewed-emacs/private-mcp-config.json';
-const outputPath = '/app/docker/merged-mcp-config.json';
+const outputPath = '/tmp/merged-mcp-config.json';
 
 try {
     // Read base config
