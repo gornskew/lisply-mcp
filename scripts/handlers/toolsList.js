@@ -139,12 +139,12 @@ function handleToolsList(request, config, logger) {
           "inputSchema": {
             "type": "object",
             "properties": {
-              "doc_id": {
+              "id": {
                 "type": "string",
                 "description": "Document ID to retrieve (e.g., 'claude-md', 'readme', 'yadd')"
               }
             },
-            "required": ["doc_id"]
+            "required": ["id"]
           }
         });
       }

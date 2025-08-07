@@ -1,4 +1,12 @@
 
+**Note: This branch is currently not stable for auto-starting
+  containers. This will be corrected,** but for now the more reliable
+  way of starting a containerized Lisply-MCP environment is with the
+  "Containerized Runnings" section of the [skewed-emacs
+  README](https://github.com/gornskew/skewed-emacs). After the
+  containers are started, then Claude Desktop will connect to them
+  according to the example configurations below.
+
 # Model Context Protocol (MCP) Middleware for Lisp-based and Lisp-like Environments
 
 <img src="scripts/robot-lambda.png" alt="Robot with Lambda machine"
@@ -89,14 +97,38 @@ to the `./scripts/mcp-wrapper.js` file from the cloned repo:
 ```json
 {
   "mcpServers": {
-    "lisply-gendl": {
+    "gendl-ccl": {
       "command": "node", 
       "args": [
         "/path/to/cloned/lisply-mcp/scripts/mcp-wrapper.js",
-        "--server-name", "gendl"
+        "--server-name", "gendl-ccl",
+	"--http-port", "9080"
+      ]
+    }
+  },
+  {
+    "gendl-sbcl": {
+      "command": "node", 
+      "args": [
+        "/path/to/cloned/lisply-mcp/scripts/mcp-wrapper.js",
+        "--server-name", "gendl-sbcl",
+	"--http-port", "9090"
+      ]
+    }
+  },
+
+  { 
+    "skewed-emacs": {
+      "command": "node", 
+      "args": [
+        "/path/to/cloned/lisply-mcp/scripts/mcp-wrapper.js",
+        "--server-name", "skewed-emacs",
+	"--http-port", "7080"
       ]
     }
   }
+
+  
 }
 ```
 
@@ -104,82 +136,50 @@ to the `./scripts/mcp-wrapper.js` file from the cloned repo:
 Or in a WSL scenario (where the Claude Desktop is running in the
 Windows host):
 
+
 ```json
 {
   "mcpServers": {
-    "lisply-gendl": {
+    "gendl-ccl": {
       "command": "wsl", 
       "args": [
-        "node", "/path/to/cloned/lisply-mcp/scripts/mcp-wrapper.js",
-        "--server-name", "gendl"
+        "node /path/to/cloned/lisply-mcp/scripts/mcp-wrapper.js",
+        "--server-name", "gendl-ccl",
+	"--http-port", "9080"
+      ]
+    }
+  },
+  {
+    "gendl-sbcl": {
+      "command": "wsl", 
+      "args": [
+        "node /path/to/cloned/lisply-mcp/scripts/mcp-wrapper.js",
+        "--server-name", "gendl-sbcl",
+	"--http-port", "9090"
+      ]
+    }
+  },
+
+  { 
+    "skewed-emacs": {
+      "command": "wsl", 
+      "args": [
+        "node /path/to/cloned/lisply-mcp/scripts/mcp-wrapper.js",
+        "--server-name", "skewed-emacs",
+	"--http-port", "7080"
       ]
     }
   }
+  
 }
 ```
+
 
 See the main Contents below for further configuration options, for
 example how to have your `~/projects/` filesystem directory be shared
 ("mounted") from your host to the default Lisply backend, or how to
 specify an alternative Lisply backend container or service host/port.
 
-### Running Multiple Lisply Servers
-
-You can run multiple Lisply MCP servers simultaneously. The server name for tool 
-prefixing is **automatically detected** based on configuration, or you can specify 
-it explicitly.
-
-**Auto-detection works by:**
-- Using `--http-host-port 7080` → detects as "emacs"
-- Using `--http-host-port 9081` → detects as "gendl"  
-- Checking environment variables like `MCP_SERVER_NAME`
-- Falling back to "lisply-mcp" if no detection possible
-
-**Simple configuration (auto-detection):**
-```json
-{
-  "mcpServers": {
-    "gendl": {
-      "command": "node",
-      "args": [
-        "/path/to/cloned/lisply-mcp/scripts/mcp-wrapper.js",
-        "--http-host-port", "9081"
-      ]
-    },
-    "emacs": {
-      "command": "node", 
-      "args": [
-        "/path/to/cloned/lisply-mcp/scripts/mcp-wrapper.js",
-        "--http-host-port", "7080",
-        "--backend-host", "localhost",
-        "--no-auto-start"
-      ]
-    }
-  }
-}
-```
-
-**Explicit configuration (if you need custom names):**
-```json
-{
-  "mcpServers": {
-    "my-gendl": {
-      "command": "node",
-      "args": [
-        "/path/to/cloned/lisply-mcp/scripts/mcp-wrapper.js",
-        "--server-name", "custom-gendl",
-        "--http-host-port", "9081"
-      ]
-    }
-  }
-}
-```
-
-This configuration will provide you with tools like:
-- `gendl__lisp_eval` - Evaluate Common Lisp expressions in Gendl
-- `gendl__http_request` - Make HTTP requests to Gendl web endpoints
-- `emacs__lisp_eval` - Evaluate Emacs Lisp expressions
-- `emacs__http_request` - Make HTTP requests to Emacs endpoints
 
 Each server operates independently, allowing you to work with multiple
 Lisp environments simultaneously without tool name conflicts.

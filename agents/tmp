@@ -72,7 +72,8 @@ class OllamaMCPAgent:
         except Exception as e:
             print(f"❌ Failed to initialize agent: {e}")
             return False
-    
+
+
     async def _load_mcp_config(self) -> bool:
         """Load and validate MCP configuration from JSON file."""
         try:
@@ -83,55 +84,79 @@ class OllamaMCPAgent:
             
             with open(config_file, 'r') as f:
                 config = json.load(f)
-            
-            # Validate config structure
-            if not isinstance(config, dict):
-                print(f"❌ Config file must contain a JSON object")
-                return False
-            
-            if 'mcpServers' not in config:
-                print(f"❌ Config file missing 'mcpServers' section")
-                return False
-            
-            servers = config['mcpServers']
-            if not isinstance(servers, dict) or not servers:
-                print(f"❌ 'mcpServers' must be a non-empty object")
-                return False
-            
-            # Validate each server configuration
-            for server_name, server_config in servers.items():
-                if not isinstance(server_config, dict):
-                    print(f"❌ Server '{server_name}' config must be an object")
+                
+                # Validate config structure
+                if not isinstance(config, dict):
+                    print(f"❌ Config file must contain a JSON object")
                     return False
                 
-                # Check required fields (either command or url)
-                has_command = 'command' in server_config
-                has_url = 'url' in server_config
-                
-                if not (has_command or has_url):
-                    print(f"❌ Server '{server_name}' must have either 'command' or 'url'")
+                if 'mcpServers' not in config:
+                    print(f"❌ Config file missing 'mcpServers' section")
                     return False
                 
-                if has_command and not server_config['command']:
-                    print(f"❌ Server '{server_name}' command cannot be empty")
+                servers = config['mcpServers']
+                if not isinstance(servers, dict) or not servers:
+                    print(f"❌ 'mcpServers' must be a non-empty object")
                     return False
                 
-                if has_url and not server_config['url']:
-                    print(f"❌ Server '{server_name}' url cannot be empty")
-                    return False
-            
-            # Create MCP client from config
-            self.client = MCPClient.from_dict(config)
-            print(f"✅ Loaded and validated MCP config from {self.config_path}")
-            print(f"   Found {len(servers)} server(s): {', '.join(servers.keys())}")
-            return True
-            
+                # Validate each server configuration
+                for server_name, server_config in servers.items():
+                    if not isinstance(server_config, dict):
+                        print(f"❌ Server '{server_name}' config must be an object")
+                        return False
+                    
+                    has_command = 'command' in server_config
+                    has_url = 'url' in server_config
+                    
+                    if not (has_command or has_url):
+                        print(f"❌ Server '{server_name}' must have either 'command' or 'url'")
+                        return False
+                    
+                    if has_command and not server_config['command']:
+                        print(f"❌ Server '{server_name}' command cannot be empty")
+                        return False
+                    
+                    if has_url and not server_config['url']:
+                        print(f"❌ Server '{server_name}' url cannot be empty")
+                        return False
+                    
+                    # Create MCP client from config
+                    self.client = MCPClient.from_dict(config)
+                    print(f"✅ Loaded and validated MCP config from {self.config_path}")
+                    print(f"   Found {len(servers)} server(s): {', '.join(servers.keys())}")
+                    
+                    # Debug session creation
+                    print(f"🔍 Checking sessions after client creation...")
+                    if hasattr(self.client, 'sessions'):
+                        print(f"   Sessions: {list(self.client.sessions.keys())}")
+                        if not self.client.sessions:
+                            print(f"⚠ No sessions created. Attempting to initialize sessions...")
+                            try:
+                                async with asyncio.timeout(10):
+                                    for server_name in servers:
+                                        print(f"   Initializing session for {server_name}...")
+                                        # Assuming MCPClient has an async method to initialize sessions
+                                        if hasattr(self.client, 'initialize_session'):
+                                            await self.client.initialize_session(server_name)
+                                        else:
+                                            print(f"⚠ MCPClient does not support initialize_session method")
+                                            print(f"   Sessions after initialization: {list(self.client.sessions.keys())}")
+                            except Exception as e:
+                                print(f"❌ Failed to initialize sessions: {e}")
+                                return False
+                            else:
+                                print(f"❌ MCPClient does not have sessions attribute")
+                                return False
+                            
+                            return True
+                        
         except json.JSONDecodeError as e:
             print(f"❌ Invalid JSON in config file: {e}")
             return False
         except Exception as e:
             print(f"❌ Failed to load MCP config: {e}")
-            return False
+            return False        
+    
     
     async def _initialize_llm(self) -> bool:
         """Initialize Ollama LLM with model verification."""

@@ -106,12 +106,12 @@ async function handleGetDocsList(request, config, logger) {
  * @param {Object} logger - Logger instance
  */
 async function handleGetDocs(request, args, config, logger) {
-  const { doc_id } = args;
+  const { id } = args;
   
-  logger.info(`Handling get_docs request for doc_id: ${doc_id}`);
+  logger.info(`Handling get_docs request for id: ${id}`);
   
-  if (!doc_id) {
-    sendErrorResponse(request, -32602, 'Missing required parameter: doc_id', logger);
+  if (!id) {
+    sendErrorResponse(request, -32602, 'Missing required parameter: id', logger);
     return;
   }
   
@@ -120,13 +120,13 @@ async function handleGetDocs(request, args, config, logger) {
   const options = {
     hostname,
     port,
-    path: `${config.BASE_PATH}/docs/${encodeURIComponent(doc_id)}`,
+    path: `${config.BASE_PATH}/docs/${encodeURIComponent(id)}`,
     method: 'GET'
   };
   
   makeHttpRequest(options, null, (error, response) => {
     if (error) {
-      logger.error(`Error fetching docs for ${doc_id}: ${error.message}`);
+      logger.error(`Error fetching docs for ${id}: ${error.message}`);
       sendErrorResponse(request, -32603, `Error fetching docs: ${error.message}`, logger);
       return;
     }

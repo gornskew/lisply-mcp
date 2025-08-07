@@ -4,12 +4,15 @@ FROM node:20-slim
 # Set working directory inside the container
 WORKDIR /app
 
-# Install system dependencies including Docker CLI
+# Install system dependencies including Docker CLI and Python
 RUN apt-get update && apt-get install -y \
     git \
     curl \
     socat \
     procps \
+    python3 \
+    python3-pip \
+    python3-venv \
     && rm -rf /var/lib/apt/lists/*
 
 RUN curl -fsSL https://download.docker.com/linux/static/stable/x86_64/docker-24.0.7.tgz | tar xz --strip-components=1 -C /usr/local/bin docker/docker \
@@ -30,7 +33,7 @@ RUN npm install -g \
     @github/copilot-language-server
 
 # Install any local dependencies
-RUN npm install || true
+RUN if [ -f package.json ]; then npm install; else echo "No package.json found, skipping npm install"; fi
 
 # Switch to node user to install claude locally
 USER node
@@ -44,6 +47,15 @@ RUN mkdir -p /home/node/.claude/local && \
 # Add claude alias to .bashrc
 RUN echo 'alias claude="/home/node/.claude/local/claude"' >> /home/node/.bashrc
 
+# Create Python virtual environment for agents
+RUN python3 -m venv /home/node/.venv && \
+    chown -R node:node /home/node/.venv
+
+# Add venv activation to .bashrc and create agent alias
+RUN echo 'source /home/node/.venv/bin/activate' >> /home/node/.bashrc && \
+    echo 'export PATH="/home/node/.venv/bin:$PATH"' >> /home/node/.bashrc && \
+    echo 'alias agent="/home/node/.venv/bin/python /app/agents/generic.py --ollama-url http://192.168.1.43:11434"' >> /home/node/.bashrc
+
 # Switch back to root for remaining setup
 USER root
 
@@ -55,6 +67,17 @@ RUN chmod +x ./scripts/mcp-wrapper.js
 
 # Run mcp-wrapper.js --help once, to fetch dependencies.
 RUN ./scripts/mcp-wrapper.js --help
+
+# Install Python dependencies in the virtual environment
+RUN /home/node/.venv/bin/pip install --upgrade pip && \
+    /home/node/.venv/bin/pip install --no-cache-dir \
+        aiohttp \
+        python-dotenv \
+        langchain-ollama \
+        mcp-use
+
+# Make Python agents executable
+RUN find ./agents -name "*.py" -exec chmod +x {} \;
 
 
 # Create entrypoint script
