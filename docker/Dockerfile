@@ -1,5 +1,5 @@
 # Node.js service container for MCP, Copilot, and Claude Code
-FROM node:20-slim
+FROM node:23-slim
 
 # Set working directory inside the container
 WORKDIR /app
@@ -47,14 +47,22 @@ RUN mkdir -p /home/node/.claude/local && \
 # Add claude alias to .bashrc
 RUN echo 'alias claude="/home/node/.claude/local/claude"' >> /home/node/.bashrc
 
-# Create Python virtual environment for agents
-RUN python3 -m venv /home/node/.venv && \
-    chown -R node:node /home/node/.venv
 
-# Add venv activation to .bashrc and create agent alias
-RUN echo 'source /home/node/.venv/bin/activate' >> /home/node/.bashrc && \
-    echo 'export PATH="/home/node/.venv/bin:$PATH"' >> /home/node/.bashrc && \
-    echo 'alias agent="/home/node/.venv/bin/python /app/agents/generic.py --ollama-url http://192.168.1.43:11434"' >> /home/node/.bashrc
+# Install Gemini Code locally for the node user
+RUN mkdir -p /home/node/.gemini/local && \
+    npm install @google/gemini-cli --prefix /home/node/.gemini/local && \
+    ln -sf /home/node/.gemini/local/node_modules/.bin/gemini /home/node/.gemini/local/gemini && \
+    echo 'alias gemini="/home/node/.gemini/local/gemini"' >> /home/node/.bashrc
+
+
+# # Create Python virtual environment for agents
+# RUN python3 -m venv /home/node/.venv && \
+#     chown -R node:node /home/node/.venv
+
+# # Add venv activation to .bashrc and create agent alias
+# RUN echo 'source /home/node/.venv/bin/activate' >> /home/node/.bashrc && \
+#     echo 'export PATH="/home/node/.venv/bin:$PATH"' >> /home/node/.bashrc && \
+#     echo 'alias agent="/home/node/.venv/bin/python /app/agents/generic.py --ollama-url http://192.168.1.43:11434"' >> /home/node/.bashrc
 
 # Switch back to root for remaining setup
 USER root
@@ -68,16 +76,16 @@ RUN chmod +x ./scripts/mcp-wrapper.js
 # Run mcp-wrapper.js --help once, to fetch dependencies.
 RUN ./scripts/mcp-wrapper.js --help
 
-# Install Python dependencies in the virtual environment
-RUN /home/node/.venv/bin/pip install --upgrade pip && \
-    /home/node/.venv/bin/pip install --no-cache-dir \
-        aiohttp \
-        python-dotenv \
-        langchain-ollama \
-        mcp-use
+# # Install Python dependencies in the virtual environment
+# RUN /home/node/.venv/bin/pip install --upgrade pip && \
+#     /home/node/.venv/bin/pip install --no-cache-dir \
+#         aiohttp \
+#         python-dotenv \
+#         langchain-ollama \
+#         mcp-use
 
-# Make Python agents executable
-RUN find ./agents -name "*.py" -exec chmod +x {} \;
+# # Make Python agents executable
+# RUN find ./agents -name "*.py" -exec chmod +x {} \;
 
 
 # Create entrypoint script
