@@ -1,6 +1,8 @@
 # Node.js service container for MCP, Copilot, and Claude Code
 FROM node:23-slim
 
+ARG DOCKER_CLI_VERSION=29.0.2
+
 # Set working directory inside the container
 WORKDIR /app
 
@@ -15,7 +17,7 @@ RUN apt-get update && apt-get install -y \
     python3-venv \
     && rm -rf /var/lib/apt/lists/*
 
-RUN curl -fsSL https://download.docker.com/linux/static/stable/x86_64/docker-24.0.7.tgz | tar xz --strip-components=1 -C /usr/local/bin docker/docker \
+RUN curl -fsSL https://download.docker.com/linux/static/stable/x86_64/docker-${DOCKER_CLI_VERSION}.tgz | tar xz --strip-components=1 -C /usr/local/bin docker/docker \
     && chmod +x /usr/local/bin/docker
 
 # Add node user to docker group for Docker socket access
