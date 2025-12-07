@@ -230,6 +230,9 @@ function startMcpWrapper(config, logger, handlers) {
   
   logger.info('Starting MCP wrapper');
   
+  // Ensure UTF-8 encoding for proper Unicode handling
+  process.stdin.setEncoding('utf8');
+  
   // Create readline interface for stdin/stdout communication
   let rl = readline.createInterface({
     input: process.stdin,
