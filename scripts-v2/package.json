@@ -1,0 +1,14 @@
+{
+  "name": "lisply-mcp-wrapper",
+  "version": "1.0.0",
+  "description": "MCP wrapper for Lisply backends with configurable server settings and Docker integration",
+  "main": "mcp-wrapper.js",
+  "scripts": {
+    "start": "node mcp-wrapper.js"
+  },
+  "author": "Genworks",
+  "license": "AGPL-3.0",
+  "dependencies": {
+    "commander": "^11.0.0"
+  }
+}

@@ -1,0 +1,26 @@
+#!/bin/bash
+#
+# mcp-exec (v2 - simplified)
+#
+# Phase 1: Assumes services are already running via ./compose-dev up
+# Phase 2 will add: auto-start composition if not running
+#
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+CONTAINER_NAME="lisply-mcp"
+
+# Log startup
+echo "[$(date -Iseconds)] mcp-exec v2 starting with args: $@" >> /tmp/mcp-exec-v2.log
+
+# Check if lisply-mcp container is running
+if ! docker ps --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
+    echo "[$(date -Iseconds)] ERROR: Container ${CONTAINER_NAME} is not running" >> /tmp/mcp-exec-v2.log
+    echo "ERROR: lisply-mcp container is not running." >&2
+    echo "Please start the composition first:" >&2
+    echo "  cd ~/projects/skewed-emacs && ./compose-dev up" >&2
+    exit 1
+fi
+
+# Run the v2 mcp-wrapper inside the lisply-mcp container
+# Note: -i keeps stdin open for MCP stdio protocol
+exec docker exec -i "${CONTAINER_NAME}" node /projects/lisply-mcp/scripts-v2/mcp-wrapper.js "$@"
