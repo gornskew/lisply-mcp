@@ -17,17 +17,14 @@ set -e
 echo "Lisply-MCP Container starting."
 echo ""
 
-# === SSH Key Setup ===
-# Check for authorized_keys mounted from skewed-emacs
-# The public key should be mounted at /home/node/.ssh/authorized_keys
-if [ -f /home/node/.ssh/authorized_keys ]; then
-    echo "SSH authorized_keys found."
-    chmod 600 /home/node/.ssh/authorized_keys
-    chown node:node /home/node/.ssh/authorized_keys
-else
-    echo "WARNING: No SSH authorized_keys found at /home/node/.ssh/authorized_keys"
-    echo "SSH access will not be available until key is configured."
-fi
+# === SSH Setup ===
+# The authorized_keys file is injected by compose-dev after container starts
+# via 'docker cp'. We just need to ensure the directory exists and start sshd.
+
+SSH_DIR="/home/node/.ssh"
+mkdir -p "$SSH_DIR"
+chmod 700 "$SSH_DIR"
+chown node:node "$SSH_DIR"
 
 # Generate host keys if they don't exist
 if [ ! -f /etc/ssh/ssh_host_rsa_key ]; then
@@ -45,6 +42,14 @@ if pgrep -x sshd > /dev/null; then
     echo "SSH server started successfully on port 22."
 else
     echo "WARNING: SSH server failed to start!"
+fi
+
+# Check if authorized_keys exists (injected by compose-dev)
+if [ -f "$SSH_DIR/authorized_keys" ]; then
+    echo "SSH authorized_keys found - SSH access from skewed-emacs is enabled."
+else
+    echo "NOTE: SSH authorized_keys not yet installed."
+    echo "      Run './compose-dev up' to set up SSH access."
 fi
 
 # === Original Entrypoint Logic ===
