@@ -1,94 +1,140 @@
-#!/bin/bash
-
+#!/usr/bin/env bash
+#
 # Build script for lisply-mcp container image
+#
+# Goals:
+# - Public-repo friendly: default is build-only (no login, no push)
+# - Optional push when explicitly enabled (PUSH_IMAGE=true)
+# - When pushing, use a dedicated Docker config dir (no DOCKER_CONFIG env var needed)
+#
 
-set -e  # Exit on any error
+set -euo pipefail
 
-# Get the script's directory and set up paths
+# -----------------------------
+# Paths
+# -----------------------------
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 
-
-# Get branch name for tagging (compatible with lisply-mcp expectations)
-if [ -z "${CI_COMMIT_REF_NAME}" ]; then
-    # Try to get branch from git
-    if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-        branch=$(git rev-parse --abbrev-ref HEAD)
-        # Replace forward slashes with double hyphens for docker tag compatibility
-        branch=${branch//\/\/\/--}
-    else
-        branch="master"
-    fi
-else
-    branch=${CI_COMMIT_REF_NAME//\/\/\/--}
-fi
-
-DOCKER_USERNAME="${DOCKER_USERNAME:-gornskew}"
-
-# Docker Hub login (optional - for CI/automated builds)
-if [ -n "${DOCKER_USERNAME}" ] && [ -n "${DOCKER_PASSWORD}" ]; then
-    echo "Logging into Docker Hub with user ${DOCKER_USERNAME} and with password..."
-    echo "${DOCKER_PASSWORD}" | docker login -u "${DOCKER_USERNAME}" --password-stdin
-else 
-    echo "Logging into Docker Hub with existing credentials..."
-    docker login
-fi
-
-# Configuration
-IMAGE_NAME="${DOCKER_USERNAME}/lisply-mcp"
-TAG=${branch}
 DOCKERFILE_PATH="$SCRIPT_DIR/Dockerfile"
 BUILD_CONTEXT="$PROJECT_ROOT"
 
+# -----------------------------
+# Branch/tag logic
+# -----------------------------
+branch="master"
+if [ -n "${CI_COMMIT_REF_NAME:-}" ]; then
+  branch="$CI_COMMIT_REF_NAME"
+elif git -C "$PROJECT_ROOT" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+  branch="$(git -C "$PROJECT_ROOT" rev-parse --abbrev-ref HEAD)"
+fi
+
+# Replace forward slashes with double hyphens for docker tag compatibility
+branch="${branch//\//--}"
+TAG="$branch"
+
+# Default push behavior:
+# - If PUSH_IMAGE is explicitly set, respect it.
+# - Otherwise, auto-enable push if the gornskew docker config exists.
+# - Otherwise, default to build-only.
+if [ -z "${PUSH_IMAGE:-}" ]; then
+  cfg="$HOME/.docker-dockerhub-gornskew/config.json"
+
+  if [ -f "$cfg" ] && grep -q '"https://index.docker.io/v1/"' "$cfg"; then
+    PUSH_IMAGE="true"
+    DOCKER_USERNAME="${DOCKER_USERNAME:-gornskew}"
+  else
+    PUSH_IMAGE="false"
+  fi
+fi
+
+
+
+DOCKER_USERNAME="${DOCKER_USERNAME:-localbuild}"
+IMAGE_NAME="${DOCKER_USERNAME}/lisply-mcp"
+
+
+# When pushing, we want to use a specific docker config directory that contains
+# the gornskew Docker Hub login (or whichever account you intend to push as).
+PUSH_DOCKER_CONFIG="${PUSH_DOCKER_CONFIG:-$HOME/.docker-dockerhub-gornskew}"
+
+# -----------------------------
+# Preflight checks
+# -----------------------------
 echo "Building Docker image: ${IMAGE_NAME}:${TAG}"
 echo "Script directory: $SCRIPT_DIR"
-echo "Project root: $PROJECT_ROOT"
-echo "Build context: $BUILD_CONTEXT"
+echo "Project root:     $PROJECT_ROOT"
+echo "Build context:    $BUILD_CONTEXT"
+echo "Dockerfile:       $DOCKERFILE_PATH"
+echo "Push:             $PUSH_IMAGE"
 
-# Check if Dockerfile exists
 if [ ! -f "$DOCKERFILE_PATH" ]; then
-    echo "Error: Dockerfile not found at $DOCKERFILE_PATH"
-    exit 1
+  echo "Error: Dockerfile not found at $DOCKERFILE_PATH" >&2
+  exit 1
 fi
 
-# Check if scripts directory exists in project root
 if [ ! -d "$PROJECT_ROOT/scripts" ]; then
-    echo "Error: scripts directory not found at $PROJECT_ROOT/scripts"
-    exit 1
+  echo "Error: scripts directory not found at $PROJECT_ROOT/scripts" >&2
+  exit 1
 fi
 
-# Check if mcp-wrapper.js exists
 if [ ! -f "$PROJECT_ROOT/scripts/mcp-wrapper.js" ]; then
-    echo "Error: mcp-wrapper.js not found at $PROJECT_ROOT/scripts/mcp-wrapper.js"
-    exit 1
+  echo "Error: mcp-wrapper.js not found at $PROJECT_ROOT/scripts/mcp-wrapper.js" >&2
+  exit 1
 fi
 
-# Build the Docker image
+# -----------------------------
+# Build
+# -----------------------------
 docker build \
-    -f "$DOCKERFILE_PATH" \
-    -t "${IMAGE_NAME}:${TAG}" \
-    "$BUILD_CONTEXT"
+  -f "$DOCKERFILE_PATH" \
+  -t "${IMAGE_NAME}:${TAG}" \
+  "$BUILD_CONTEXT"
 
+# -----------------------------
+# Push (optional)
+# -----------------------------
+if [[ "$PUSH_IMAGE" == "true" ]]; then
+  echo ""
+  echo "Push enabled."
 
-# Push to Docker Hub (if login credentials are available)
-echo "Pushing image to Docker Hub..."
-if docker push "${IMAGE_NAME}:${TAG}"; then
-    echo "Successfully pushed ${IMAGE_NAME}:${TAG} to Docker Hub"
-    
-    # Also tag and push as 'latest' if this is the main/master branch
+  # If you're pushing, you almost certainly want to push to the real namespace.
+  # Encourage that explicitly so you don't accidentally push "localbuild/*".
+  if [[ "$DOCKER_USERNAME" == "localbuild" ]]; then
+    echo "Error: PUSH_IMAGE=true but DOCKER_USERNAME is still default 'localbuild'." >&2
+    echo "Set DOCKER_USERNAME (e.g., DOCKER_USERNAME=gornskew) to push to the intended namespace." >&2
+    exit 2
+  fi
+
+  # Optional: login only if credentials are provided (CI-friendly).
+  # If not provided, we assume your PUSH_DOCKER_CONFIG already has a valid login.
+  if [ -n "${DOCKER_PASSWORD:-}" ]; then
+    echo "Logging into Docker Hub (non-interactive) for push user '${DOCKER_USERNAME}'..."
+    echo "${DOCKER_PASSWORD}" | docker --config "$PUSH_DOCKER_CONFIG" login -u "${DOCKER_USERNAME}" --password-stdin
+  else
+    echo "No DOCKER_PASSWORD provided; assuming existing credentials in: $PUSH_DOCKER_CONFIG"
+  fi
+
+  echo "Pushing image to Docker Hub using config: $PUSH_DOCKER_CONFIG"
+  if docker --config "$PUSH_DOCKER_CONFIG" push "${IMAGE_NAME}:${TAG}"; then
+    echo "Successfully pushed ${IMAGE_NAME}:${TAG}"
+
+    # Also tag and push as 'latest' if this is main-ish branch
     if [[ "$branch" == "main" || "$branch" == "master" || "$branch" == "devo" ]]; then
-        echo "Tagging and pushing as latest..."
-        docker tag "${IMAGE_NAME}:${TAG}" "${IMAGE_NAME}:latest"
-        if DOCKER_CONFIG=~/.docker-dockerhub-gornskew docker push "${IMAGE_NAME}:latest"; then
-            echo "Successfully pushed ${IMAGE_NAME}:latest to Docker Hub"
-        else
-            echo "Warning: Failed to push ${IMAGE_NAME}:latest"
-        fi
+      echo "Tagging and pushing as latest..."
+      docker tag "${IMAGE_NAME}:${TAG}" "${IMAGE_NAME}:latest"
+      docker --config "$PUSH_DOCKER_CONFIG" push "${IMAGE_NAME}:latest"
+      echo "Successfully pushed ${IMAGE_NAME}:latest"
     fi
+  else
+    echo "Warning: Failed to push ${IMAGE_NAME}:${TAG}" >&2
+    echo "If you're local: make sure you're logged in under '$PUSH_DOCKER_CONFIG'." >&2
+    echo "  docker --config \"$PUSH_DOCKER_CONFIG\" login -u \"$DOCKER_USERNAME\"" >&2
+    exit 3
+  fi
 else
-    echo "Warning: Failed to push ${IMAGE_NAME}:${TAG} to Docker Hub"
-    echo "Make sure you're logged in with: docker login"
-    echo "Or set DOCKER_USERNAME and DOCKER_PASSWORD environment variables"
+  echo ""
+  echo "Skipping push (public repo default)." 
 fi
 
 echo ""
