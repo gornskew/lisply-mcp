@@ -27,7 +27,7 @@ function ensureDependencies() {
     console.error('Missing dependencies. Running npm install...');
     const { execSync } = require('child_process');
     try {
-      execSync('npm install', { cwd: __dirname, stdio: 'inherit' });
+      execSync('npm install', { cwd: __dirname, stdio: ['ignore', 'pipe', 'pipe'] });
       console.error('Dependencies installed. Please restart.');
       process.exit(0);
     } catch (err) {

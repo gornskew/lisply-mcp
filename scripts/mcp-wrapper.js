@@ -13,7 +13,7 @@ function installDependenciesAndRestart(contextMessage = 'Missing dependency dete
     // Execute npm install synchronously
     const { execSync } = require('child_process');
     console.error('\x1b[36mRunning: npm install\x1b[0m');
-    execSync('npm install', { cwd: __dirname, encoding: 'utf8' });
+    execSync('npm install', { cwd: __dirname, stdio: ['ignore', 'pipe', 'pipe'] });
     
     console.error('\x1b[32mDependencies installed successfully!\x1b[0m');
     console.error('\nRestarting script with newly installed dependencies...\n');

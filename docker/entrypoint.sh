@@ -1,6 +1,6 @@
 #!/bin/bash
-# Minimal entrypoint for lisply-mcp container
-# This container serves as MCP middleware - actual MCP servers are spawned as needed
+# Minimal entrypoint for lisply-mcp container This container serves as
+# MCP middleware - backend Lisply servers are spawned as needed
 
 cleanup() {
     echo "Received signal, shutting down..."
