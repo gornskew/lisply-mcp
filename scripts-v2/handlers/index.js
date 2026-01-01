@@ -61,6 +61,7 @@ const { handleInitialize } = require('./initialize');
 const { handleToolsList } = require('./toolsList');
 const { handleToolCall } = require('./toolCall');
 const { handleHttpRequest } = require('./httpRequest');
+const { handleGdlSearch } = require('./gdlSearch');
 const { handlePingLisp } = require('./ping');
 const { handleLispEval } = require('./lispEval');
 
@@ -68,5 +69,6 @@ module.exports.handleInitialize = handleInitialize;
 module.exports.handleToolsList = handleToolsList;
 module.exports.handleToolCall = handleToolCall;
 module.exports.handleHttpRequest = handleHttpRequest;
+module.exports.handleGdlSearch = handleGdlSearch;
 module.exports.handlePingLisp = handlePingLisp;
 module.exports.handleLispEval = handleLispEval;

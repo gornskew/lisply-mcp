@@ -8,6 +8,7 @@ const { extractOriginalToolName } = require('../lib/config');
 const { getBackendConnectionInfo, makeHttpRequest } = require('../lib/server');
 const { sendErrorResponse, sendStandardResponse } = require('./index');
 const { handleHttpRequest } = require('./httpRequest');
+const { handleGdlSearch } = require('./gdlSearch');
 const { handlePingLisp } = require('./ping');
 const { handleLispEval } = require('./lispEval');
 
@@ -36,6 +37,8 @@ function handleToolCall(request, config, logger) {
         return handleGetDocsList(request, config, logger);
       case 'get_docs':
         return handleGetDocs(request, args, config, logger);
+      case 'gdl_search':
+        return handleGdlSearch(request, args, config, logger);
       default:
         sendErrorResponse(request, -32601, `Unknown tool: ${toolName}`, logger);
     }

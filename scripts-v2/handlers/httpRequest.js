@@ -44,6 +44,10 @@ function handleHttpRequest(request, args, config, logger) {
     options.headers['Content-Type'] = 'application/json';
   }
   
+  if (requestBody && !options.headers['Content-Length'] && !options.headers['content-length']) {
+    options.headers['Content-Length'] = Buffer.byteLength(requestBody);
+  }
+  
   makeHttpRequest(options, requestBody, (error, response) => {
     if (error) {
       logger.error(`HTTP request error: ${error.message}`);
