@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /**
- * mcp-wrapper.js (v2 - simplified)
+ * mcp-wrapper.js 
  * 
  * Copyright (C) 2025 Genworks
  * 
@@ -72,7 +72,7 @@ const logger = createLogger(config);
 
 // Log startup info
 logger.info('='.repeat(60));
-logger.info('Lisply MCP Wrapper v2 (simplified) starting');
+logger.info('Lisply MCP Wrapper starting');
 logger.info('='.repeat(60));
 logger.info(`Server name: ${config.SERVER_NAME}`);
 logger.info(`Backend: ${config.BACKEND_HOST}:${config.HTTP_HOST_PORT} (host) / :${config.HTTP_PORT} (container)`);

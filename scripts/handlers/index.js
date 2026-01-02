@@ -1,5 +1,5 @@
 /**
- * index.js (v2)
+ * index.js
  * 
  * Handler exports and response utilities
  */

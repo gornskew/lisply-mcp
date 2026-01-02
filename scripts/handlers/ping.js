@@ -1,5 +1,5 @@
 /**
- * ping.js (v2)
+ * ping.js 
  * 
  * Handler for ping_lisp tool
  */

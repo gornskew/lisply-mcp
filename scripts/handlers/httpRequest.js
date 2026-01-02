@@ -1,5 +1,5 @@
 /**
- * httpRequest.js (v2)
+ * httpRequest.js 
  * 
  * Handler for HTTP request tool
  */

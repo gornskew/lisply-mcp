@@ -1,5 +1,5 @@
 /**
- * config.js (v2 - simplified)
+ * config.js
  * 
  * Configuration for Lisply MCP wrapper.
  * Stripped of docker/container orchestration - just connection config.

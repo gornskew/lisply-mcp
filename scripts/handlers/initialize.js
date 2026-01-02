@@ -1,5 +1,5 @@
 /**
- * initialize.js (v2)
+ * initialize.js
  * 
  * Handler for MCP initialization
  */

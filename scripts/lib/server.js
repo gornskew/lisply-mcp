@@ -1,5 +1,5 @@
 /**
- * server.js (v2 - simplified)
+ * server.js 
  * 
  * HTTP client and MCP server implementation.
  * No container management - just protocol handling.

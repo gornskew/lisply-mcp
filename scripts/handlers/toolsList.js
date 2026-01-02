@@ -1,5 +1,5 @@
 /**
- * toolsList.js (v2)
+ * toolsList.js 
  * 
  * Handler for tools/list requests
  */
