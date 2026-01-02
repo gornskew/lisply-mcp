@@ -1,77 +1,67 @@
 /**
- * httpRequest.js
+ * httpRequest.js (v2)
  * 
  * Handler for HTTP request tool
  */
 
-const { getBackendConnectionInfo } = require('../lib/server');
-const { makeHttpRequest } = require('../lib/server');
-const { sendTextResponse, sendErrorResponse } = require('../lib/utils');
+const { getBackendConnectionInfo, makeHttpRequest } = require('../lib/server');
+const { sendTextResponse, sendErrorResponse } = require('./index');
 
 /**
- * Handle HTTP request with support for all methods and bodies
- * @param {Object} request - MCP request
- * @param {Object} args - Tool arguments
- * @param {Object} config - Configuration object
- * @param {Object} logger - Logger instance
+ * Handle HTTP request tool
  */
-async function handleHttpRequest(request, args, config, logger) {
-    logger.info(`Handling http_request: ${JSON.stringify(args)}`);
-    
-    try {
-	// Check for required path parameter
-	if (!args.path) {
-	    sendErrorResponse(request, -32602, "Missing required parameter: path", logger);
-	    return;
-	}
-	
-	// Prepare the request options
-	const { hostname, port } = getBackendConnectionInfo(config, logger);
-	const options = {
-	    hostname,
-	    port,
-	    path: args.path,
-	    method: args.method || 'GET',
-	    headers: {
-		'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
-	    }
-	};
-	
-	// Support both 'body' and 'content' parameters (content takes precedence if both are provided)
-	const requestBody = args.content !== undefined ? args.content : args.body;
-	
-	// Add custom headers if provided
-	if (args.headers && typeof args.headers === 'object') {
-	    options.headers = { ...options.headers, ...args.headers };
-	}
-	
-	// If Content-Type is not specified for POST/PUT and we have a body, default to application/json
-	if (['POST', 'PUT'].includes(options.method) && requestBody && 
-            !options.headers['Content-Type'] && !options.headers['content-type']) {
-	    options.headers['Content-Type'] = 'application/json';
-	}
-	
-	makeHttpRequest(options, requestBody, (error, response) => {
-	    if (error) {
-		logger.error(`HTTP request error: ${error.message}`);
-		sendErrorResponse(request, -32603, `Error making HTTP request: ${error.message}`, logger);
-		return;
-	    }
-	    
-	    // If rawResponse is set, return the full response object
-	    if (args.rawResponse) {
-		sendTextResponse(request, JSON.stringify(response, null, 2), logger);
-	    } else {
-		// Otherwise, return just the content
-		sendTextResponse(request, response.content, logger);
-	    }
-	}, null, logger);
-    } catch (error) {
-	logger.error(`Error in http_request: ${error.message}`);
-	sendErrorResponse(request, -32603, `Error making HTTP request: ${error.message}`, logger);
+function handleHttpRequest(request, args, config, logger) {
+  logger.info(`Handling http_request: ${JSON.stringify(args)}`);
+  
+  if (!args.path) {
+    sendErrorResponse(request, -32602, 'Missing required parameter: path', logger);
+    return;
+  }
+  
+  const { hostname, port } = getBackendConnectionInfo(config, logger);
+  
+  const options = {
+    hostname,
+    port,
+    path: args.path,
+    method: args.method || 'GET',
+    timeoutMs: config.REQUEST_TIMEOUT_MS,
+    headers: {
+      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
     }
+  };
+  
+  // Support both 'body' and 'content' parameters
+  const requestBody = args.content !== undefined ? args.content : args.body;
+  
+  // Add custom headers
+  if (args.headers && typeof args.headers === 'object') {
+    options.headers = { ...options.headers, ...args.headers };
+  }
+  
+  // Default Content-Type for POST/PUT with body
+  if (['POST', 'PUT'].includes(options.method) && requestBody && 
+      !options.headers['Content-Type'] && !options.headers['content-type']) {
+    options.headers['Content-Type'] = 'application/json';
+  }
+  
+  if (requestBody && !options.headers['Content-Length'] && !options.headers['content-length']) {
+    options.headers['Content-Length'] = Buffer.byteLength(requestBody);
+  }
+  
+  makeHttpRequest(options, requestBody, (error, response) => {
+    if (error) {
+      logger.error(`HTTP request error: ${error.message}`);
+      sendErrorResponse(request, -32603, `Error making HTTP request: ${error.message}`, logger);
+      return;
+    }
+    
+    if (args.rawResponse) {
+      sendTextResponse(request, JSON.stringify(response, null, 2), logger);
+    } else {
+      sendTextResponse(request, response.content, logger);
+    }
+  }, 'HTTP-REQUEST', logger);
 }
 
-module.exports = {
-  handleHttpRequest
-};
+module.exports = { handleHttpRequest };

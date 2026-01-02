@@ -1,23 +1,20 @@
 /**
- * ping.js
+ * ping.js (v2)
  * 
  * Handler for ping_lisp tool
  */
 
-const { getBackendConnectionInfo } = require('../lib/server');
-const { makeHttpRequest } = require('../lib/server');
-const { sendTextResponse, sendErrorResponse } = require('../lib/utils');
+const { getBackendConnectionInfo, makeHttpRequest } = require('../lib/server');
+const { sendTextResponse, sendErrorResponse } = require('./index');
 
 /**
- * Handle simple ping_lisp tool
- * @param {Object} request - MCP request
- * @param {Object} config - Configuration object
- * @param {Object} logger - Logger instance
+ * Handle ping_lisp tool
  */
 function handlePingLisp(request, config, logger) {
   logger.info('Handling ping_lisp request');
   
   const { hostname, port } = getBackendConnectionInfo(config, logger);
+  
   const options = {
     hostname,
     port,
@@ -27,16 +24,13 @@ function handlePingLisp(request, config, logger) {
   
   makeHttpRequest(options, null, (error, response) => {
     if (error) {
-      logger.error(`Error pinging backend server: ${error.message}`);
-      sendErrorResponse(request, -32603, `Error pinging backend server: ${error.message}`, logger);
+      logger.error(`Ping error: ${error.message}`);
+      sendErrorResponse(request, -32603, `Error pinging backend: ${error.message}`, logger);
       return;
     }
     
-    // Just return the raw text response
     sendTextResponse(request, response.content, logger);
   }, 'PING', logger);
 }
 
-module.exports = {
-  handlePingLisp
-};
+module.exports = { handlePingLisp };

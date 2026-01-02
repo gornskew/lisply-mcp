@@ -1,26 +1,22 @@
 /**
- * initialize.js
+ * initialize.js (v2)
  * 
  * Handler for MCP initialization
  */
 
-const { sendResponse } = require('../lib/utils');
+const { sendResponse } = require('./index');
 
 /**
- * Handle MCP initialization
- * @param {Object} request - MCP request
- * @param {Object} config - Configuration object
- * @param {Object} logger - Logger instance
+ * Handle MCP initialize request
  */
 function handleInitialize(request, config, logger) {
   logger.info('Handling initialize request');
   
-  // Send successful initialization response
   const response = {
     jsonrpc: '2.0',
     id: request.id,
     result: {
-      protocolVersion: request.params.protocolVersion || '0.1.0',
+      protocolVersion: request.params?.protocolVersion || '0.1.0',
       capabilities: {
         experimental: {},
         prompts: { listChanged: false },
@@ -38,6 +34,4 @@ function handleInitialize(request, config, logger) {
   logger.info('Initialization complete');
 }
 
-module.exports = {
-  handleInitialize
-};
+module.exports = { handleInitialize };
