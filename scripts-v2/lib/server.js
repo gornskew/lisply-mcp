@@ -73,6 +73,7 @@ function checkBackendAvailability(config, logger) {
  */
 function makeHttpRequest(options, body, callback, logPrefix, logger) {
   const prefix = logPrefix ? `[${logPrefix}] ` : '';
+  const timeoutMs = Number.isFinite(options.timeoutMs) ? options.timeoutMs : 10000;
   
   logger.debug(`${prefix}${options.method} http://${options.hostname}:${options.port}${options.path}`);
   if (body) {
@@ -109,7 +110,7 @@ function makeHttpRequest(options, body, callback, logPrefix, logger) {
     callback(error);
   });
   
-  req.setTimeout(10000, () => {
+  req.setTimeout(timeoutMs, () => {
     logger.error(`${prefix}Request timed out`);
     req.destroy();
     callback(new Error('Request timed out'));

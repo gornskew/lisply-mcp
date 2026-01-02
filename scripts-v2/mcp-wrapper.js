@@ -61,6 +61,7 @@ program
     .option('--ping-endpoint <n>', 'Endpoint name for ping (default: ping-lisp)')
     .option('--server-name <n>', 'MCP server name for tool prefixing (default: lisply-mcp)')
     .option('--eval-timeout <ms>', 'Timeout for Lisp evaluation in milliseconds (default: 30000)')
+    .option('--request-timeout-ms <ms>', 'Timeout for backend HTTP requests in milliseconds (default: 10000)')
     .parse(process.argv);
 
 // Load configuration

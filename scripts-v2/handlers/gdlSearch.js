@@ -23,6 +23,7 @@ function handleGdlSearch(request, args, config, logger) {
     port,
     path: `${config.BASE_PATH}/gdl-search`,
     method: 'POST',
+    timeoutMs: config.REQUEST_TIMEOUT_MS,
     headers: {
       'Content-Type': 'application/json',
       'Content-Length': Buffer.byteLength(payload)

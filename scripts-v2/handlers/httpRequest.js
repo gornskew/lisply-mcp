@@ -25,6 +25,7 @@ function handleHttpRequest(request, args, config, logger) {
     port,
     path: args.path,
     method: args.method || 'GET',
+    timeoutMs: config.REQUEST_TIMEOUT_MS,
     headers: {
       'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
     }

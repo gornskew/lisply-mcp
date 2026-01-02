@@ -120,6 +120,10 @@ function loadConfig(program) {
   
   // Timeouts
   const EVAL_TIMEOUT = parseInt10(options.evalTimeout || getEnvVar('EVAL_TIMEOUT', '30000'), 30000);
+  const REQUEST_TIMEOUT_MS = parseInt10(
+    options.requestTimeoutMs || getEnvVar('REQUEST_TIMEOUT_MS', '10000'),
+    10000
+  );
   
   // Logging
   const LOG_FILE = options.logFile || getEnvVar('LOG_FILE', '/tmp/lisply-mcp-wrapper.log');
@@ -141,6 +145,7 @@ function loadConfig(program) {
     PING_ENDPOINT,
     SERVER_NAME,
     EVAL_TIMEOUT,
+    REQUEST_TIMEOUT_MS,
     LOG_FILE,
     DEBUG_MODE,
     VERSION,
