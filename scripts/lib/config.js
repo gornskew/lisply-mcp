@@ -90,10 +90,10 @@ function extractOriginalToolName(prefixedToolName) {
  * Load configuration from CLI args and environment
  */
 function loadConfig(program) {
-  const options = program.opts();
-  
-  const MIN_PORT = 1024;
-  const MAX_PORT = 65535;
+    const options = program.opts();
+    
+    const MIN_PORT = 1;
+    const MAX_PORT = 65535;
   
   // Backend connection
   const BACKEND_HOST = options.backendHost || getEnvVar('BACKEND_HOST', '127.0.0.1');
