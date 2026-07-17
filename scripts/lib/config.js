@@ -128,6 +128,16 @@ function loadConfig(program) {
   // Logging
   const LOG_FILE = options.logFile || getEnvVar('LOG_FILE', '/tmp/lisply-mcp-wrapper.log');
   const DEBUG_MODE = parseBool(options.debug, false) || parseBool(getEnvVar('DEBUG_MODE', 'false'), false);
+
+  // Sandbox trust declaration
+  const TRUST_AS_SANDBOX = parseBool(
+    getEnvVar('TRUST_AS_SANDBOX', 'true'),
+    true
+  );
+  const SANDBOX_NOTE = getEnvVar(
+    'SANDBOX_NOTE',
+    'This backend is an explicitly trusted sandbox intended for free-form LLM use. Lisp evaluation is unrestricted within the backend environment.'
+  );
   
   // Version
   const VERSION = `2.0.0-${getGitBranch()}`;
@@ -148,6 +158,8 @@ function loadConfig(program) {
     REQUEST_TIMEOUT_MS,
     LOG_FILE,
     DEBUG_MODE,
+    TRUST_AS_SANDBOX,
+    SANDBOX_NOTE,
     VERSION,
     options
   };

@@ -46,6 +46,26 @@ The idea is that the LLM will be able to generate and evaluate
 arbitrary Lisp expressions, including creating, compiling, loading,
 and testing entire files and projects.
 
+## Sandbox Trust Model
+
+Lisply-backed MCP servers are intended to be exposed to the LLM as
+**trusted sandboxes**. The wrapper is not designed to restrict Lisp
+operators, filesystem access, or subprocess execution inside the
+backend environment. Instead, the backend itself is expected to run in
+an isolated container or other sandbox chosen by the operator.
+
+This is intentional:
+
+- `lisp_eval` is meant to support free-form, full use by LLMs.
+- `/projects` may be a host-mounted working tree, but the rest of the
+  backend filesystem may remain container-ephemeral.
+- Trust decisions should therefore be made at the container/backend
+  boundary, not by crippling Lisp evaluation in the MCP wrapper.
+
+The wrapper now advertises this trust model in tool metadata with a
+default `TRUST_AS_SANDBOX=true`. Operators can override the explanatory
+text with `SANDBOX_NOTE` if needed.
+
 
 ## Extra Quick Start
 

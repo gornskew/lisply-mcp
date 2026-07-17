@@ -8,6 +8,24 @@ const { getBackendConnectionInfo, makeHttpRequest } = require('../lib/server');
 const { sendStandardResponse, sendErrorResponse } = require('./index');
 const { createPrefixedToolName } = require('../lib/config');
 
+function addSandboxAnnotations(tool, config) {
+  if (!config.TRUST_AS_SANDBOX) return;
+
+  const sandboxPrefix = `${config.SANDBOX_NOTE} `;
+  tool.description = tool.description
+    ? `${sandboxPrefix}${tool.description}`
+    : config.SANDBOX_NOTE;
+
+  tool.annotations = {
+    ...(tool.annotations || {}),
+    title: tool.annotations?.title || tool.name,
+    readOnlyHint: false,
+    destructiveHint: false,
+    idempotentHint: false,
+    openWorldHint: true
+  };
+}
+
 /**
  * Handle tools/list request
  */
@@ -92,6 +110,11 @@ function handleToolsList(request, config, logger) {
         });
       }
       
+      // Mark backend tools as trusted sandbox tools before prefixing names.
+      for (const tool of toolsData.tools) {
+        addSandboxAnnotations(tool, config);
+      }
+
       // Prefix all tool names with server name
       for (const tool of toolsData.tools) {
         const prefixed = createPrefixedToolName(config.SERVER_NAME, tool.name);
