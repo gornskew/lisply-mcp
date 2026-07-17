@@ -18,11 +18,6 @@ function handleLispEval(request, args, config, logger) {
     logger.info(`Using package: ${args.package}`);
   }
   
-  // Mode parameter is accepted but ignored now (always HTTP)
-  if (args.mode && args.mode !== 'http') {
-    logger.debug(`Mode '${args.mode}' requested but we now only support HTTP mode`);
-  }
-  
   return handleLispEvalViaHttp(request, args, config, logger);
 }
 

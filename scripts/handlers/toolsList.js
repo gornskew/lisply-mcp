@@ -55,18 +55,6 @@ function handleToolsList(request, config, logger) {
         throw new Error('Invalid tools list response format');
       }
       
-      // Add mode parameter to lisp_eval if present
-      for (const tool of toolsData.tools) {
-        if (tool.name === 'lisp_eval' && tool.inputSchema?.properties) {
-          if (!tool.inputSchema.properties.mode) {
-            tool.inputSchema.properties.mode = {
-              type: 'string',
-              description: 'The mode to use to talk to Gendl, either http (default) or stdio.\nStdio will only be respected for local Gendl containers started by the MCP server itself.'
-            };
-          }
-        }
-      }
-      
       // Add http_request tool if missing
       if (!toolsData.tools.some(t => t.name === 'http_request')) {
         toolsData.tools.push({
