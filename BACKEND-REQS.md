@@ -216,3 +216,62 @@ level, not directly with the backend, as this feature is handled by
 the MCP wrapper and is expected to be ignored by the backend.
 
 A successful implementation should respond correctly to all these tests.
+
+## Optional: Additional Backend-Defined Tools
+
+Beyond the baseline `ping_lisp` and `lisp_eval`, a backend MAY
+advertise additional tools in its `/lisply/tools/list` response. The
+wrapper passes these through to the MCP client (with server-name
+prefixing) and forwards calls to any tool it does not natively handle
+to the backend:
+
+```
+POST /lisply/tools/call
+{"name": "<tool-name>", "arguments": { ... }}
+```
+
+The backend responds with an MCP-style result object, passed through
+to the client unchanged:
+
+```json
+{"content": [{"type": "text", "text": "..."}]}
+```
+
+Content blocks may be of any MCP content type; in particular
+`{"type": "image", "data": "<base64>", "mimeType": "image/png"}`
+lets a backend return images that vision-capable models consume
+directly. On failure, include `"isError": true` and a text block
+describing the error.
+
+Backends that do not implement `/lisply/tools/call` simply never
+advertise extra tools; the wrapper's native set continues to work
+unchanged. Example: Gendl/Genworks-GDL backends advertise a
+`render_png` tool (see gendl: gwl/lisply-backend and
+gwl-graphics/gwl/source/lisply-render-tool.lisp) which renders
+geometry via the standalone drawing system and returns MCP image
+content.
+
+### Design Guidance: When to Add a Tool (and When Not To)
+
+The founding principle of Lisply is that `lisp_eval` can do anything:
+the backend's full language is the API. Extra tools are justified only
+when they provide something `lisp_eval` structurally cannot, never as
+vocabulary shortcuts. The test: could an s-expression deliver this
+result *in the same form*? If yes, it belongs in eval (and in docs and
+examples), not in a tool.
+
+Legitimate reasons for a tool:
+
+- **A different return channel.** `lisp_eval` returns text. A tool can
+  return other MCP content types -- e.g. `render_png` returns an image
+  block that vision-capable models perceive directly, which no text
+  result can achieve.
+- **A different trust or availability boundary.** `ping_lisp` works
+  when eval is wedged; a search over a prebuilt index queries a
+  corpus, not the live image.
+
+Illegitimate reason: convenience wrappers over things eval already
+does (`make_box`, `load_system`, ...). Each such tool teaches the LLM
+to route around the REPL, eroding the interactive-development
+experience that is the point of Lisply. Keep the tool count low and
+the eval documentation rich.

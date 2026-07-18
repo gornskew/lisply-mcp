@@ -40,12 +40,62 @@ function handleToolCall(request, config, logger) {
       case 'skewed_search':
         return handleSkewedSearch(request, args, config, logger);
       default:
-        sendErrorResponse(request, -32601, `Unknown tool: ${toolName}`, logger);
+        // Tools beyond the wrapper's native set may be advertised by
+        // the backend in its /tools/list; forward such calls to the
+        // backend's generic tools/call endpoint.
+        return handleBackendTool(request, originalToolName, args, config, logger);
     }
   } catch (error) {
     logger.error(`Tool call error: ${error.message}`);
     sendErrorResponse(request, -32603, `Error calling tool: ${error.message}`, logger);
   }
+}
+
+/**
+ * Forward a tool call to the backend's generic tools/call endpoint.
+ *
+ * Backends may advertise additional tools (beyond the lisply
+ * baseline) in their /tools/list response. Calls to such tools are
+ * forwarded as POST {BASE_PATH}/tools/call with body
+ * {"name": <tool>, "arguments": {...}}. The backend responds with an
+ * MCP-style result object: {"content": [...], ("isError": true)} --
+ * passed through to the client unchanged, so backends can return any
+ * MCP content type including image blocks.
+ */
+function handleBackendTool(request, toolName, args, config, logger) {
+  logger.info(`Forwarding tool call to backend: ${toolName}`);
+
+  const { hostname, port } = getBackendConnectionInfo(config, logger);
+  const body = JSON.stringify({ name: toolName, arguments: args });
+
+  const options = {
+    hostname,
+    port,
+    path: `${config.BASE_PATH}/tools/call`,
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Content-Length': Buffer.byteLength(body)
+    }
+  };
+
+  makeHttpRequest(options, body, (error, response) => {
+    if (error) {
+      sendErrorResponse(request, -32603,
+        `Error calling backend tool ${toolName}: ${error.message}`, logger);
+      return;
+    }
+    try {
+      const result = JSON.parse(response.content);
+      if (!result.content || !Array.isArray(result.content)) {
+        throw new Error('Backend tool result missing content array');
+      }
+      sendStandardResponse(request, result, logger);
+    } catch (parseError) {
+      sendErrorResponse(request, -32603,
+        `Error parsing backend tool result for ${toolName}: ${parseError.message}`, logger);
+    }
+  }, 'BACKEND-TOOL', logger);
 }
 
 /**
