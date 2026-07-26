@@ -37,7 +37,7 @@ function handleLispEvalViaHttp(request, args, config, logger) {
     port,
     path: config.EVAL_ENDPOINT,
     method: 'POST',
-    timeoutMs: config.REQUEST_TIMEOUT_MS,
+    timeoutMs: config.EVAL_TIMEOUT,
     headers: {
       'Content-Type': 'application/json',
       'Content-Length': Buffer.byteLength(payload)

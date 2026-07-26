@@ -116,3 +116,13 @@ process.on('SIGTERM', () => {
 process.on('unhandledRejection', (reason, promise) => {
   logger.error(`Unhandled promise rejection: ${reason}`);
 });
+
+// A dead wrapper is the worst failure mode (client sees a permanently
+// unresponsive MCP server).  Individual request state is self-contained,
+// so log and keep serving rather than crashing.
+process.on('uncaughtException', (error) => {
+  logger.error(`Uncaught exception: ${error.message}`);
+  if (error.stack) {
+    logger.error(error.stack);
+  }
+});
