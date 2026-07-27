@@ -5,7 +5,7 @@
  */
 
 const { getBackendConnectionInfo, makeHttpRequest } = require('../lib/server');
-const { sendTextResponse, sendErrorResponse } = require('./index');
+const { sendTextResponse, sendErrorResponse, sendToolErrorResponse } = require('./index');
 
 /**
  * Handle HTTP request tool
@@ -52,7 +52,7 @@ function handleHttpRequest(request, args, config, logger) {
   makeHttpRequest(options, requestBody, (error, response) => {
     if (error) {
       logger.error(`HTTP request error: ${error.message}`);
-      sendErrorResponse(request, -32603, `Error making HTTP request: ${error.message}`, logger);
+      sendToolErrorResponse(request, `Error making HTTP request: ${error.message}`, logger);
       return;
     }
     

@@ -6,7 +6,7 @@
 
 const { extractOriginalToolName } = require('../lib/config');
 const { getBackendConnectionInfo, makeHttpRequest } = require('../lib/server');
-const { sendErrorResponse, sendStandardResponse } = require('./index');
+const { sendErrorResponse, sendStandardResponse, sendToolErrorResponse } = require('./index');
 const { handleHttpRequest } = require('./httpRequest');
 const { handleSkewedSearch } = require('./skewedSearch');
 const { handlePingLisp } = require('./ping');
@@ -47,7 +47,7 @@ function handleToolCall(request, config, logger) {
     }
   } catch (error) {
     logger.error(`Tool call error: ${error.message}`);
-    sendErrorResponse(request, -32603, `Error calling tool: ${error.message}`, logger);
+    sendToolErrorResponse(request, `Error calling tool: ${error.message}`, logger);
   }
 }
 
@@ -81,7 +81,7 @@ function handleBackendTool(request, toolName, args, config, logger) {
 
   makeHttpRequest(options, body, (error, response) => {
     if (error) {
-      sendErrorResponse(request, -32603,
+      sendToolErrorResponse(request,
         `Error calling backend tool ${toolName}: ${error.message}`, logger);
       return;
     }
@@ -92,7 +92,7 @@ function handleBackendTool(request, toolName, args, config, logger) {
       }
       sendStandardResponse(request, result, logger);
     } catch (parseError) {
-      sendErrorResponse(request, -32603,
+      sendToolErrorResponse(request,
         `Error parsing backend tool result for ${toolName}: ${parseError.message}`, logger);
     }
   }, 'BACKEND-TOOL', logger);
@@ -115,7 +115,7 @@ function handleGetDocsList(request, config, logger) {
   
   makeHttpRequest(options, null, (error, response) => {
     if (error) {
-      sendErrorResponse(request, -32603, `Error fetching docs list: ${error.message}`, logger);
+      sendToolErrorResponse(request, `Error fetching docs list: ${error.message}`, logger);
       return;
     }
     
@@ -159,7 +159,7 @@ function handleGetDocs(request, args, config, logger) {
   
   makeHttpRequest(options, null, (error, response) => {
     if (error) {
-      sendErrorResponse(request, -32603, `Error fetching docs: ${error.message}`, logger);
+      sendToolErrorResponse(request, `Error fetching docs: ${error.message}`, logger);
       return;
     }
     

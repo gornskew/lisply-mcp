@@ -38,6 +38,24 @@ function sendStandardResponse(requestOrId, data, logger) {
   }, logger);
 }
 
+// Tool-level error: a SUCCESSFUL JSON-RPC response whose result carries
+// isError:true + visible text (MCP tool-error convention).  Use this for
+// eval failures, unreachable backends, etc.  JSON-RPC protocol errors
+// (sendErrorResponse) get flattened to a bare "Tool execution failed" by
+// the claude.ai relay, hiding the actual message; isError results render.
+function sendToolErrorResponse(requestOrId, text, logger) {
+  const id = typeof requestOrId === 'object' ? requestOrId.id : requestOrId;
+
+  sendResponse({
+    jsonrpc: '2.0',
+    id,
+    result: {
+      content: [{ type: 'text', text: String(text || 'Unknown error') }],
+      isError: true
+    }
+  }, logger);
+}
+
 function sendErrorResponse(requestOrId, code, message, logger) {
   const id = typeof requestOrId === 'object' ? requestOrId.id : requestOrId;
   
@@ -53,6 +71,7 @@ module.exports = {
   sendResponse,
   sendTextResponse,
   sendStandardResponse,
+  sendToolErrorResponse,
   sendErrorResponse
 };
 

@@ -5,7 +5,7 @@
  */
 
 const { getBackendConnectionInfo, makeHttpRequest } = require('../lib/server');
-const { sendTextResponse, sendErrorResponse } = require('./index');
+const { sendTextResponse, sendToolErrorResponse } = require('./index');
 
 /**
  * Handle ping_lisp tool
@@ -25,7 +25,7 @@ function handlePingLisp(request, config, logger) {
   makeHttpRequest(options, null, (error, response) => {
     if (error) {
       logger.error(`Ping error: ${error.message}`);
-      sendErrorResponse(request, -32603, `Error pinging backend: ${error.message}`, logger);
+      sendToolErrorResponse(request, `Error pinging backend: ${error.message}`, logger);
       return;
     }
     

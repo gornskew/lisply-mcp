@@ -6,7 +6,7 @@
  */
 
 const { getBackendConnectionInfo, makeHttpRequest } = require('../lib/server');
-const { sendTextResponse, sendErrorResponse } = require('./index');
+const { sendTextResponse, sendToolErrorResponse } = require('./index');
 
 /**
  * Handle lisp_eval tool call
@@ -47,7 +47,7 @@ function handleLispEvalViaHttp(request, args, config, logger) {
   makeHttpRequest(options, payload, (error, response) => {
     if (error) {
       logger.error(`Lisp eval error: ${error.message}`);
-      sendErrorResponse(request, -32603, `Error evaluating Lisp code: ${error.message}`, logger);
+      sendToolErrorResponse(request, `Error evaluating Lisp code: ${error.message}`, logger);
       return;
     }
     
@@ -60,7 +60,7 @@ function handleLispEvalViaHttp(request, args, config, logger) {
           sendTextResponse(request, `Result: ${result.result}, Stdout: ${result.stdout}`, logger);
         } else {
           logger.error(`Lisp eval failed: ${result.error || 'Unknown error'}`);
-          sendErrorResponse(request, -32603, `Error: ${result.error || 'Unknown error'}`, logger);
+          sendToolErrorResponse(request, `Error: ${result.error || 'Unknown error'}${result.stdout ? `, Stdout: ${result.stdout}` : ''}`, logger);
         }
       } else {
         // Non-standard format, return as-is
