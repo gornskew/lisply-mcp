@@ -140,6 +140,13 @@ function loadConfig(program) {
   );
   
   // Version
+  // Admin auth: optional secret injected as a header on every backend
+  // request, for talking to a gated backend (e.g. a Cyclops with an
+  // admin secret configured).  Empty string / unset -> no header.
+  const ADMIN_SECRET = options.adminSecret || getEnvVar('ADMIN_SECRET', '');
+  const ADMIN_SECRET_HEADER = options.adminSecretHeader
+        || getEnvVar('ADMIN_SECRET_HEADER', 'X-Cyclops-Admin-Secret');
+
   const VERSION = `2.0.0-${getGitBranch()}`;
   
   return {
@@ -158,6 +165,8 @@ function loadConfig(program) {
     REQUEST_TIMEOUT_MS,
     LOG_FILE,
     DEBUG_MODE,
+    ADMIN_SECRET,
+    ADMIN_SECRET_HEADER,
     TRUST_AS_SANDBOX,
     SANDBOX_NOTE,
     VERSION,

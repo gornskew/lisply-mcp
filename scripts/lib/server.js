@@ -27,6 +27,11 @@ const HARD_DEADLINE_MS = 60000;
 /** Dedicated agent for backend connections (resettable). */
 let backendAgent = createBackendAgent();
 
+/** Optional admin auth header injected on every backend request.
+ *  Set once from config in startMcpWrapper; null means "no header". */
+let adminHeaderName = null;
+let adminSecret = null;
+
 function createBackendAgent() {
   return new http.Agent({ keepAlive: true, maxSockets: 8 });
 }
@@ -132,6 +137,13 @@ function makeHttpRequest(options, body, callback, logPrefix, logger) {
     callback(error, result);
   }
 
+  // Inject the admin auth header (e.g. for a gated Cyclops) on every
+  // backend request, including redirect hand-offs, without each handler
+  // needing to know about it.
+  if (adminSecret) {
+    options = { ...options,
+                headers: { ...(options.headers || {}), [adminHeaderName]: adminSecret } };
+  }
   const req = http.request({ ...options, agent: backendAgent, timeout: timeoutMs }, (res) => {
     let data = '';
 
@@ -199,6 +211,12 @@ function makeHttpRequest(options, body, callback, logPrefix, logger) {
  */
 function startMcpWrapper(config, logger, handlers) {
   logger.info('Starting MCP stdio server');
+
+  if (config.ADMIN_SECRET) {
+    adminHeaderName = config.ADMIN_SECRET_HEADER;
+    adminSecret = config.ADMIN_SECRET;
+    logger.info(`Admin auth header enabled: ${adminHeaderName} (value hidden)`);
+  }
 
   process.stdin.setEncoding('utf8');
 
