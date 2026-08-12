@@ -1,18 +1,13 @@
 #!/usr/bin/env node
 
-/**
- * mcp-wrapper.js 
- * 
- * Copyright (C) 2025 Genworks
- * 
+/*
+ * Copyright (C) 2026 Gornskew Enterprises
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as
  * published by the Free Software Foundation, either version 3 of the
- * License, or (at your option) any later version.
- * 
- * Lisply MCP middleware - pure protocol handler.
- * Assumes backend services are already running (via docker-compose or otherwise).
- * Will fail fast if backend is not available.
+ * License, or (at your option) any later version.  Distributed WITHOUT
+ * ANY WARRANTY; see <https://www.gnu.org/licenses/agpl-3.0.html>.
  */
 
 const path = require('path');
