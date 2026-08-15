@@ -434,9 +434,9 @@ The wrapper is now a pure HTTP client: it connects to whatever Lisply
 backend is already listening at the configured host and port, and
 reports a helpful error (with a compose hint) when nothing is there.
 
-For a containerized backend stack (Gendl, skewed-emacs, etc.), use the
-docker compose setup described in the [skewed-emacs
-README](https://github.com/gornskew/skewed-emacs) (`compose-dev`),
+For a containerized backend stack (Gendl, skewed-emacs, etc.), use
+Basilisk, the compose framework at
+`gitlab.genworks.com:gornskew/basilisk` (`./basilisk up`),
 which owns image selection, volume mounting, port publishing, and UID
 mapping. For a non-containerized backend, start any Lisply-compliant
 server yourself (e.g. the host-Emacs path described in skewed-emacs
