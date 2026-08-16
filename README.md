@@ -1,9 +1,8 @@
 
 **Note: This wrapper does not start or manage containers.** It is a
 pure HTTP client to an already-running Lisply backend. Container
-lifecycle is owned by docker compose — see the "Containerized
-Runnings" section of the [skewed-emacs
-README](https://github.com/gornskew/skewed-emacs) — or run your own
+lifecycle is owned by docker compose — see "Running it" in the
+[Basilisk README](https://github.com/gornskew/basilisk) — or run your own
 Lisply backend directly on a host and point the wrapper at its
 host/port. Once a backend is running, Claude Desktop connects to it
 according to the example configurations below.
@@ -70,8 +69,9 @@ text with `SANDBOX_NOTE` if needed.
 
 ## Extra Quick Start
 
-Follow the "Containerized Runnings" section of the [skewed-emacs
-README](https://github.com/gornskew/skewed-emacs).
+Follow "Running it" in the [Basilisk
+README](https://github.com/gornskew/basilisk) — `git clone` the yard,
+then `./basilisk up`.
 
 This will get you a Docker Compose setup including a preconfigured
 containerized version of Lisply-MCP. 
@@ -90,8 +90,8 @@ background and detailed configuration options.
    installed directly in Windows or in WSL.
 
 2. Have a running Lisply backend to connect to. The easiest way is
-   the docker compose stack from the [skewed-emacs
-   README](https://github.com/gornskew/skewed-emacs) (requires
+   the docker compose stack from the [Basilisk
+   README](https://github.com/gornskew/basilisk) (requires
    [Docker](https://docs.docker.com/engine/install/)); alternatively,
    run any Lisply-compliant backend directly on your host.
 
@@ -202,8 +202,8 @@ Windows host):
 See the main Contents below for further configuration options, for
 example how to specify an alternative Lisply backend service
 host/port. (Sharing/mounting host directories into containerized
-backends is configured in the docker compose setup, e.g. skewed-emacs
-`compose-dev`, not by this wrapper.)
+backends is configured in the docker compose setup, e.g. Basilisk's
+`./basilisk`, not by this wrapper.)
 
 
 Each server operates independently, allowing you to work with multiple
@@ -235,7 +235,7 @@ proceeding.
 The minimal default configuration described in the Quick Start above
 connects to an already-running
 [Gendl](https://gitlab.common-lisp.net/gendl/gendl) backend (for
-example from the skewed-emacs docker compose stack), a Common Lisp
+example from a Basilisk stack), a Common Lisp
 superset sporting a standard REPL (Read-Eval-Print Loop). The wrapper
 itself never pulls or starts containers. Note a second Lisply backend implementation
 for Emacs lisp also exists, within the [Skewed
@@ -618,7 +618,7 @@ If the wrapper reports it cannot reach the backend:
 
 1. For the containerized stack, make sure the compose services are up:
 ```bash
-cd ~/projects/skewed-emacs && ./compose-dev up
+cd ~/projects/basilisk && ./basilisk up
 ```
 
 2. Check whether anything is listening on the expected port:
@@ -633,7 +633,7 @@ backend:
 
 1. Check if the Lisply server is running (for the compose stack):
 ```bash
-cd ~/projects/skewed-emacs && ./compose-dev ps
+docker ps    # the stack's containers should be listed and healthy
 ```
 
 
@@ -691,7 +691,7 @@ tail -f /tmp/lisply-mcp-wrapper.log
 
 2. Check backend container logs (for the compose stack):
 ```bash
-cd ~/projects/skewed-emacs && ./compose-dev logs
+cd ~/projects/basilisk && ./basilisk logs
 ```
 
 3. Check Lisply service status:
