@@ -6,8 +6,8 @@
   "scripts": {
     "start": "node mcp-wrapper.js"
   },
-  "author": "Genworks",
-  "license": "AGPL-3.0",
+  "author": "Gornskew Enterprises",
+  "license": "AGPL-3.0-or-later",
   "dependencies": {
     "commander": "^11.0.0"
   }
