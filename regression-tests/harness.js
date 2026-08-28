@@ -9,7 +9,7 @@
  * ANY WARRANTY; see <https://www.gnu.org/licenses/agpl-3.0.html>.
  */
 
-// Real stdio JSON-RPC regression harness for the lisply-mcp wrapper.
+// Real stdio JSON-RPC regression harness for the cyborg-whisperer wrapper.
 // Spawns the wrapper, drives: initialize -> tools/list -> tools/call
 // (ping_lisp, lisp_eval x3 incl. error case, http_request), and emits
 // normalized JSON to stdout for golden-baseline capture/diffing.

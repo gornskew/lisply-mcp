@@ -86,7 +86,7 @@ checkBackendAvailability(config, logger)
       logger.error(`Expected backend at: ${config.BACKEND_HOST}:${config.HTTP_HOST_PORT}`);
       logger.error('');
       logger.error('Please ensure the docker-compose services are running:');
-      logger.error('  cd ~/projects/skewed-emacs && ./compose-dev up');
+      logger.error('  cd ~/projects/basilisk && ./basilisk up');
       logger.error('');
       process.exit(1);
     }

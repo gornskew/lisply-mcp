@@ -1,7 +1,7 @@
 {
-  "name": "lisply-mcp-wrapper",
+  "name": "cyborg-whisperer",
   "version": "1.0.0",
-  "description": "MCP wrapper for Lisply backends with configurable server settings and Docker integration",
+  "description": "Receives, educates, and dispatches AI agents (cyborgs) to Lisply-speaking Lisp backends over MCP",
   "main": "mcp-wrapper.js",
   "scripts": {
     "start": "node mcp-wrapper.js"

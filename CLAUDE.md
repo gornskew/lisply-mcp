@@ -1,109 +1,72 @@
-# Projects Directory
+# Cyborg Whisperer — agent guidance
 
-## Common Lisp Service
+This file guides Claude Code (claude.ai/code) or other AI agents
+working in this repo.  It is deliberately mixed-register: lore nouns
+are bound to their referents at first use, then used freely;
+commands, identifiers, and warnings never take the voice.
 
-There is a Common Lisp service running on localhost that handles eval requests.
+## What this repo is
 
-### Testing the Service
+The upstream home of the Cyborg Whisperer: a Node.js MCP middleware
+(the kit whose running instance is a **Protocol Officer** — the crew
+member who receives arriving AI agents, schools them in the ship's
+ways, and dispatches them to the resident they came to see).  It
+presents MCP tools (`lisp_eval`, `http_request`, `ping_lisp`, and
+`skewed_search` where the backend carries a document corpus) to any
+MCP client and relays them over HTTP to a Lisply-compliant backend.
 
-To test the Lisp evaluation service:
+Renamed from `lisply-mcp` on 2026-08-28; git history and some
+runtime defaults still carry the elder name (see Compatibility
+below).  The protocol itself is and remains **Lisply** — that name
+did not change.
+
+## Layout
+
+- `scripts/mcp-wrapper.js` — main entry point
+- `scripts/lib/` — config, logger, server, utils
+- `scripts/handlers/` — per-tool request handlers
+- `BACKEND-REQS.md` — the Lisply protocol spec (what a compliant
+  backend must implement)
+- `regression-tests/harness.js` — stdio JSON-RPC regression harness
+- `attic/` — the retired container-management subsystem, history only
+
+## Working on it
+
+- The wrapper is a **pure HTTP client**: it never pulls, starts, or
+  manages containers.  Container lifecycle belongs to the Basilisk
+  yard (`~/projects/basilisk`, `./basilisk up`).  Do not reintroduce
+  docker plumbing here.
+- After JS edits: `node --check scripts/mcp-wrapper.js` (and any
+  touched lib/handler files).
+- Regression harness, against a live backend (from inside the ship's
+  network the hostnames are room slugs):
+
+```bash
+node regression-tests/harness.js --backend-host bridge --http-port 9080
+node regression-tests/harness.js --backend-host ready-room --http-port 7080
+```
+
+- Quick manual probe of a Lisply backend (default Gendl backend
+  published on host port 9081):
 
 ```bash
 curl -X POST http://127.0.0.1:9081/lisply/lisp-eval -d '{"code": "(+ 1 2 3)"}'
 ```
 
-Expected response format:
-```json
-{"success":true,"result":"6","stdout":""}
-```
+## Compatibility contracts — do not sweep these
 
-The service expects JSON with a `code` field containing the Lisp expression to evaluate.
+The following defaults are user-visible contracts.  Changing them is
+a versioned behavior decision, never part of a naming or doc sweep:
 
-**Note:** Do not include the `Content-Type: application/json` header - the service works without it and including it may cause issues with some tools.
+- default `--server-name`: `lisply-mcp` (feeds MCP tool prefixes)
+- default log file: `/tmp/lisply-mcp-wrapper.log`
+- the `LISPLY_*` environment-variable prefix
+- the `lisply` endpoint prefix and endpoint names
 
-**Important for Claude Code:** When using the Bash tool to call the service, the JSON response will be treated as an "error" by default. To properly capture the response, use output redirection:
+## Trust model
 
-```bash
-curl -X POST http://127.0.0.1:9081/lisply/lisp-eval -d '{"code": "(+ 1 2 3)"}' 2>&1 | cat
-```
-
-This captures both stdout and stderr and pipes through cat to display the actual JSON response.
-
-## Modern Site Development Workflow
-
-### Loading the Development Environment
-
-1. **Load Quicklisp:**
-   ```bash
-   curl -X POST http://127.0.0.1:9081/lisply/lisp-eval -d '{"code": "(load-quicklisp)"}'
-   ```
-
-2. **Add local project directory:**
-   ```bash
-   curl -X POST http://127.0.0.1:9081/lisply/lisp-eval -d '{"code": "(pushnew \"~/projects/apps/\" ql:*local-project-directories* :test #'\''equalp)"}'
-   ```
-
-3. **Load the website systems:**
-   ```bash
-   curl -X POST http://127.0.0.1:9081/lisply/lisp-eval -d '{"code": "(ql:quickload :modern-site)"}'
-   curl -X POST http://127.0.0.1:9081/lisply/lisp-eval -d '{"code": "(ql:quickload :royalties)"}'
-   ```
-
-### Website Structure
-
-The modern-site application runs at http://localhost:9081/ and includes:
-
-**Main Page Components:**
-- **Assembly class** (`apps/modern-site/source/assembly.lisp:4`) - Main landing page
-- **Base-site-sheet** (`apps/modern-site/source/base-site-sheet.lisp:4`) - Common layout with Bootstrap navbar, footer, and styling
-
-**Working Internal Links:**
-- `/contact/index.html` - Contact information and links
-- `/about/index.html` - Licensing and pricing details  
-- `/products/index.html` - Product descriptions with collapsible sections
-- `/gwl/index.html` - Generative Web Language information
-- `/smlib/index.html` - Solid modeling capabilities
-
-All pages have "Home" navigation back to `/` landing page.
-
-**Note on Initialization:**
-The `(modern-site:initialize!)` function sets up web routes and static file serving, which can conflict with the HTTP eval service. Run initialization from SLIME REPL instead of through the HTTP service.
-
-### Testing Live Pages
-
-Use curl to test any page:
-```bash
-curl -s http://localhost:9081/contact/index.html | head -20
-```
-
-**Verified Working Endpoints:**
-- All main pages load with proper HTML structure
-- Bootstrap CSS and JavaScript assets serve correctly
-- Image assets serve correctly (logos, photos)
-- Navigation between pages works properly
-- Static file serving is operational after initialization
-
-**Development Notes:**
-- When testing static assets with `curl -I` (HEAD requests), responses may appear as errors even when assets are serving correctly
-- Use `curl -s` for content requests to properly test page functionality
-- Static assets include: Bootstrap CSS/JS, custom CSS, jQuery, and image files in `/site-images/` directory
-
-### Development Workflow with Update! Links
-
-Both sites include **Update!** and **SetSelf** development links when `gwl:*developing?*` is enabled:
-
-```bash
-curl -X POST http://127.0.0.1:9081/lisply/lisp-eval -d '{"code": "(setq gwl:*developing?* t)"}' 2>&1 | cat
-```
-
-**Using the Development Links:**
-- **Update!** - Recompiles changed source code and refreshes the page to show updates
-- **SetSelf** - Sets the REPL toplevel `*self*` to the current page object for interactive development
-
-**Iterative Development Process:**
-1. Make changes to source files (`.lisp`, `.gendl`) 
-2. Click **Update!** link on the web page OR use `(the update!)` if self is set via lisp-eval
-3. Refresh page to see changes immediately
-4. Use **SetSelf** to enable REPL commands like `(the update!)` for faster iteration
-
-This enables rapid prototyping without restarting the entire development environment.
+Lisply backends are exposed to the LLM as **trusted sandboxes**: the
+wrapper does not restrict Lisp operators, filesystem access, or
+subprocesses.  Isolation is the operator's job, at the container
+boundary.  Keep tool metadata advertising this (`TRUST_AS_SANDBOX`,
+`SANDBOX_NOTE`) intact.

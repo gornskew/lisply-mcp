@@ -172,7 +172,7 @@ For legacy access methods:
 - Telnet server for direct Lisp interaction
 - Default port: 4023 (internal to container) / 4024 (visible on docker host)
 
-## Containerization Support (optional in principle, but required for local operation of lisply-mcp)
+## Containerization Support (optional in principle, but required for local operation of cyborg-whisperer)
 
 For standardized deployment, backends should support:
 
@@ -191,7 +191,7 @@ Currently, there are implementations or planned implementations for:
 
 1. **Gendl**: A full implementation available at [Gendl on GitLab](https://gitlab.common-lisp.net/gendl/gendl)
         with Lisply implementation [here](https://gitlab.common-lisp.net/gendl/gendl/gwl/lisply-backend)
-2. **GNU Emacs Backend**: In development at [Skewed Emacs on GitHub](https://github.com/gornskew/skewed-emacs.git)
+2. **GNU Emacs Backend**: In development at [Readymax on GitHub](https://github.com/gornskew/readymax.git)
 
 
 ## Testing for Compliance
