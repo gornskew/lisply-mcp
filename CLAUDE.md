@@ -12,7 +12,8 @@ The upstream home of the Cyborg Whisperer: a Node.js MCP middleware
 member who receives arriving AI agents, schools them in the ship's
 ways, and dispatches them to the resident they came to see).  It
 presents MCP tools (`lisp_eval`, `http_request`, `ping_lisp`, and
-`skewed_search` where the backend carries a document corpus) to any
+`lisply_search` where the backend carries a document corpus -- called
+`skewed_search` until 2026-09-09, a name still routed as an alias) to any
 MCP client and relays them over HTTP to a Lisply-compliant backend.
 
 Renamed from `lisply-mcp` on 2026-08-28; git history and some

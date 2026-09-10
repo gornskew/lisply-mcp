@@ -90,7 +90,7 @@ const { handleInitialize } = require('./initialize');
 const { handleToolsList } = require('./toolsList');
 const { handleToolCall } = require('./toolCall');
 const { handleHttpRequest } = require('./httpRequest');
-const { handleSkewedSearch } = require('./skewedSearch');
+const { handleLisplySearch, handleSkewedSearch } = require('./lisplySearch');
 const { handlePingLisp } = require('./ping');
 const { handleLispEval } = require('./lispEval');
 
@@ -98,6 +98,7 @@ module.exports.handleInitialize = handleInitialize;
 module.exports.handleToolsList = handleToolsList;
 module.exports.handleToolCall = handleToolCall;
 module.exports.handleHttpRequest = handleHttpRequest;
-module.exports.handleSkewedSearch = handleSkewedSearch;
+module.exports.handleLisplySearch = handleLisplySearch;
+module.exports.handleSkewedSearch = handleSkewedSearch; // deprecated alias
 module.exports.handlePingLisp = handlePingLisp;
 module.exports.handleLispEval = handleLispEval;

@@ -354,8 +354,9 @@ were to go "haywire." Therefore, best practices are:
   - **httpRequest.js**: HTTP request handler
   - **ping.js**: Ping handler
   - **lispEval.js**: Lisp evaluation handler
-  - **skewedSearch.js**: Document-corpus search handler (backends
-    that advertise it, e.g. Readymax rooms)
+  - **lisplySearch.js**: Document-corpus search handler, the
+    `lisply_search` tool (backends that advertise it, e.g. Readymax
+    rooms); also answers the pre-rename name `skewed_search`
 - **mcp-wrapper.js**: <--- Main entry point  <---
 
 

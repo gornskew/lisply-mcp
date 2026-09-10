@@ -9,16 +9,27 @@
  */
 
 /**
- * skewedSearch.js
+ * lisplySearch.js
  *
- * Handle skewed_search tool via HTTP POST to backend.
+ * Handle the lisply_search tool via HTTP POST to the backend's
+ * /lisply-search endpoint.  The tool was called skewed_search until
+ * 2026-09-09; that name is still accepted and routed to the backend's
+ * old /skewed-search endpoint, so a wrapper of either vintage keeps
+ * working against a backend of either vintage.  Drop the alias one
+ * release after the rename.
  */
 
 const { getBackendConnectionInfo, makeHttpRequest } = require('../lib/server');
 const { sendStandardResponse, sendErrorResponse } = require('./index');
 
-function handleSkewedSearch(request, args, config, logger) {
+const ENDPOINTS = {
+  lisply_search: '/lisply-search',
+  skewed_search: '/skewed-search'
+};
+
+function handleLisplySearch(request, args, config, logger, toolName = 'lisply_search') {
   const query = args.query;
+  const endpoint = ENDPOINTS[toolName] || ENDPOINTS.lisply_search;
 
   if (!query || typeof query !== 'string' || !query.trim()) {
     sendErrorResponse(request, -32602, 'Missing required parameter: query', logger);
@@ -31,7 +42,7 @@ function handleSkewedSearch(request, args, config, logger) {
   const options = {
     hostname,
     port,
-    path: `${config.BASE_PATH}/skewed-search`,
+    path: `${config.BASE_PATH}${endpoint}`,
     method: 'POST',
     timeoutMs: config.REQUEST_TIMEOUT_MS,
     headers: {
@@ -42,8 +53,8 @@ function handleSkewedSearch(request, args, config, logger) {
 
   makeHttpRequest(options, payload, (error, response) => {
     if (error) {
-      logger.error(`skewed_search error: ${error.message}`);
-      sendErrorResponse(request, -32603, `Error calling skewed_search: ${error.message}`, logger);
+      logger.error(`${toolName} error: ${error.message}`);
+      sendErrorResponse(request, -32603, `Error calling ${toolName}: ${error.message}`, logger);
       return;
     }
 
@@ -56,10 +67,15 @@ function handleSkewedSearch(request, args, config, logger) {
         }]
       }, logger);
     } catch (e) {
-      logger.error(`skewed_search response parse error: ${e.message}`);
-      sendErrorResponse(request, -32603, `Error parsing skewed_search response: ${e.message}`, logger);
+      logger.error(`${toolName} response parse error: ${e.message}`);
+      sendErrorResponse(request, -32603, `Error parsing ${toolName} response: ${e.message}`, logger);
     }
-  }, 'SKEWED-SEARCH', logger);
+  }, 'LISPLY-SEARCH', logger);
 }
 
-module.exports = { handleSkewedSearch };
+// Deprecated alias, kept for callers that imported the old handler name.
+function handleSkewedSearch(request, args, config, logger) {
+  return handleLisplySearch(request, args, config, logger, 'skewed_search');
+}
+
+module.exports = { handleLisplySearch, handleSkewedSearch };
