@@ -48,11 +48,7 @@ function handleToolCall(request, config, logger) {
       case 'get_docs':
         return handleGetDocs(request, args, config, logger);
       case 'lisply_search':
-        return handleLisplySearch(request, args, config, logger, 'lisply_search');
-      case 'skewed_search':
-        // Pre-rename name (until 2026-09-09); routed to the backend's
-        // old endpoint so an older backend keeps answering it too.
-        return handleLisplySearch(request, args, config, logger, 'skewed_search');
+        return handleLisplySearch(request, args, config, logger);
       default:
         // Tools beyond the wrapper's native set may be advertised by
         // the backend in its /tools/list; forward such calls to the

@@ -13,23 +13,20 @@
  *
  * Handle the lisply_search tool via HTTP POST to the backend's
  * /lisply-search endpoint.  The tool was called skewed_search until
- * 2026-09-09; that name is still accepted and routed to the backend's
- * old /skewed-search endpoint, so a wrapper of either vintage keeps
- * working against a backend of either vintage.  Drop the alias one
- * release after the rename.
+ * 2026-09-09; the alias was dropped on 2026-09-10 along with the
+ * backend's /skewed-search endpoint.
  */
 
 const { getBackendConnectionInfo, makeHttpRequest } = require('../lib/server');
 const { sendStandardResponse, sendErrorResponse } = require('./index');
 
-const ENDPOINTS = {
-  lisply_search: '/lisply-search',
-  skewed_search: '/skewed-search'
-};
+const ENDPOINT = '/lisply-search';
+const TOOL_NAME = 'lisply_search';
 
-function handleLisplySearch(request, args, config, logger, toolName = 'lisply_search') {
+function handleLisplySearch(request, args, config, logger) {
   const query = args.query;
-  const endpoint = ENDPOINTS[toolName] || ENDPOINTS.lisply_search;
+  const endpoint = ENDPOINT;
+  const toolName = TOOL_NAME;
 
   if (!query || typeof query !== 'string' || !query.trim()) {
     sendErrorResponse(request, -32602, 'Missing required parameter: query', logger);
@@ -73,9 +70,4 @@ function handleLisplySearch(request, args, config, logger, toolName = 'lisply_se
   }, 'LISPLY-SEARCH', logger);
 }
 
-// Deprecated alias, kept for callers that imported the old handler name.
-function handleSkewedSearch(request, args, config, logger) {
-  return handleLisplySearch(request, args, config, logger, 'skewed_search');
-}
-
-module.exports = { handleLisplySearch, handleSkewedSearch };
+module.exports = { handleLisplySearch };

@@ -356,7 +356,7 @@ were to go "haywire." Therefore, best practices are:
   - **lispEval.js**: Lisp evaluation handler
   - **lisplySearch.js**: Document-corpus search handler, the
     `lisply_search` tool (backends that advertise it, e.g. Readymax
-    rooms); also answers the pre-rename name `skewed_search`
+    rooms)
 - **mcp-wrapper.js**: <--- Main entry point  <---
 
 
